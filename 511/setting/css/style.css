@@ -6,7 +6,7 @@
   font-size:14px;
 }
 
-.myIconOn {
+/*.myIconOn {
   background-image: url(../../images/delete_default.png);
   background-repeat: no-repeat;
   background-color: transparent;
@@ -26,7 +26,7 @@
   text-align: center;
   color:transparent;
   cursor: pointer;
-}
+}*/
 
 .thumb2{
     width:20px; 
@@ -38,11 +38,10 @@
 }
 
 .recLabel{
-    text-align:center;
-    vertical-align: central;
-    align-content:center;
+    text-align:left;
+    vertical-align: top;
+    align-content:flex-end;
 }
-
 
 .jimu-widget-511-setting .instruction{
 	 padding-top: 20px;
@@ -51,29 +50,35 @@
 .jimu-widget-511-setting .instruction span{
 	color: #596679;
 }
-.jimu-widget-511-setting .editor-container{
+
+/*.jimu-widget-511-setting .editor-container{
     position: relative;
     width: 40%;
 	border: 1px solid #d2dae2;
 	background-color: #fafafc;
 }
+
 .jimu-widget-511-setting .editor-container .uploaderInsideNode embed {
 	display: none;
 }
+
 .jimu-widget-511-setting .editor-container .dijitEditorIFrameContainer{
 
-}
+}*/
 
 .jimu-widget-511-setting .show{
   width: 120px;
 }
+
 .jimu-widget-511-setting .symbol{
   width: 200px;
 }
+
 .jimu-widget-511-setting .first-page{
 	position: relative;
 	/*height: 100%;*/
 }
+
 .jimu-widget-511-setting .table-layer-infos{
 	width: 100%;
     height: 200px;
@@ -104,19 +109,20 @@ margin-left:100px;
    align-items: center;
    align-content:center;
 }
-	.panelContent {
-		position: relative;
-		width: 200px;
-		height: 200px;
-	}
+
+.panelContent {
+	position: relative;
+	width: 200px;
+	height: 200px;
+}
 	
-	.page {
-		position: relative;
-		width: 220px;
-		height: 200px;
-		display: block;
-		background-color: rgba(0,0,0,0.15);
-	}
+.page {
+	position: relative;
+	width: 220px;
+	height: 200px;
+	display: block;
+	background-color: rgba(0,0,0,0.15);
+}
 
 .pageHeader {
 	position: relative;
@@ -157,7 +163,7 @@ margin-left:100px;
 	filter:alpha(opacity=30);
 }
 
-        .bg {
+.bg {
 	display: block;
 	background-color: rgb(255,255,255);
 	-moz-opacity: 0.9;
@@ -179,8 +185,8 @@ margin-left:100px;
 }
 
 .pageContent {
-	position:relative;
- top:0px;
+    position:relative;
+    top:0px;
 }
 
 .pageIcon {
@@ -202,7 +208,6 @@ margin-left:100px;
 	position: absolute;
 	right: 5px;
 	top: 5px;
-	background: url(../images/up.png) no-repeat;
 	cursor: pointer;
 	width: 20px;
 	height: 20px;
@@ -287,10 +292,4 @@ margin-left:100px;
 	width: 227px;
 	height: 30px;
 	overflow: hidden;
-}
-
-svg {
-  position: relative;
-  transform: translateX(-10%);
-  fill="url(#img1)";
 }
