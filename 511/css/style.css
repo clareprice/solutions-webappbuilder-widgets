@@ -19,16 +19,39 @@
   width:100%;
   visibility:visible;
   height:auto;
-  border-bottom: 1px solid #dcdcdc;
 }
 
 .clusterSymbol{
-  padding-top:5px;
+  margin: 4px 4px 4px 4px;
   display:block;
-  width:50px;
+  width:35px;
   visibility:visible;
-  height:50px;
+  height:35px;
   float:left;
+  -moz-border-radius: 30px;
+  -webkit-border-radius: 30px;
+  border-radius: 30px;
+  opacity:0.60;
+  filter:alpha(opacity=30);
+  z-index:3;
+}
+
+.clusterSymbol2{
+  display:block;
+  width:100%;
+  visibility:visible;
+  height:auto;
+  float:left;
+  border-bottom: 1px solid #dcdcdc;
+      z-index:3;
+}
+
+.recImg2 {
+    padding-top: 4px;
+	width: 30px;
+	height: 30px;
+     z-index:1;
+     /*opacity:0.99;*/
 }
 
 /*JH TODO see if I can use something like this to control only my widgets position...without having to go to a custom theme*/
@@ -487,6 +510,8 @@ html, body {
     height:23px; 
     align-content:center;
     vertical-align:super;
+    z-index:1;
+    /*opacity:0.99;*/
 }
 
 .active {

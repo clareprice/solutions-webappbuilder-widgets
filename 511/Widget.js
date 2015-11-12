@@ -67,6 +67,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     queryLookupList: [],
     w: null,
     legendNodes: [],
+    popupSelectionChanged: null,
+    currentClusterLayer: null,
 
     postCreate: function () {
       this.inherited(arguments);
@@ -104,7 +106,43 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }
 
       this.layerVisibilityManager.setLayerVisibility(this.layerList, false);
+
+      this.map.infoWindow.highlight = true;
+
+      //this.popupSelectionChanged = this.map.infoWindow.on("selection-change", lang.hitch(this, function () {
+      //  //var graphic = this.map.infoWindow.getSelectedFeature();
+      //  //if (this.map.infoWindow.selectedIndex > -1) {
+      //  //  this.map.infoWindow.select(this.map.infoWindow.selectedIndex);
+      //  //}
+      //  //if (graphic) {
+      //  //  if (graphic.hasOwnProperty('_graphicsLayer')) {
+      //  //    var l = graphic._graphicsLayer;
+      //  //    if (l.hasOwnProperty('_showSingles')) {
+      //  //      if (l._showSingles) {
+      //  //        this.currentClusterLayer = l;
+      //  //      }
+      //  //    }
+      //  //  } else {
+      //  //    this.currentClusterLayer.flashSingle(graphic);
+      //  //  }
+      //  //}
+      //}));
     },
+
+    //_popupSelectionChangedHandler: function(){
+    //  //need to find what layer this originated from and then call flashSingles
+    //  var graphic = this.map.infoWindow.getSelectedFeature();
+    //  if (graphic) {
+    //    if (graphic.hasOwnProperty('_graphicsLayer')) {
+    //      var l = graphic._graphicsLayer;
+    //      if (l.hasOwnProperty('_showSingles')) {
+    //        if (l._showSingles) {
+    //          l.flashSingles();
+    //        }
+    //      }
+    //    }
+    //  }
+    //},
 
     enableRefresh: function () {
       //set refreshItereval on all widget source layers that support it
@@ -158,13 +196,11 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             var queries = [];
             for (var i = 0; i < this.configLayerInfos.length; i++) {
               var lyrInfo = this.configLayerInfos[i];
-              if (lyrInfo.use) {
-                //if it's a mapservice layer we need to get the geometry type
-                if (lyrInfo.url.indexOf("MapServer")) {
-                  queries.push(esriRequest({ "url": lyrInfo.url + "?f=json" }));
-                  this.queryLookupList.push({ "url": lyrInfo.url, "geomType": "" });
-                }
-              }
+              //if it's a mapservice layer we need to get the geometry type
+              if (lyrInfo.url.indexOf("MapServer")) {
+                queries.push(esriRequest({ "url": lyrInfo.url + "?f=json" }));
+                this.queryLookupList.push({ "url": lyrInfo.url, "geomType": "" });
+              }            
             }
 
             if (queries.length > 0) {
@@ -203,11 +239,13 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
       for (var i = 0; i < layerInfos.length; i++) {
         var lyrInfo = layerInfos[i];
-        if (lyrInfo.use) {
-          this._createLayerListItem(lyrInfo);
-        } else{
-          this.removeMapLayer(lyrInfo.id);
-        }
+
+        //TODO need a way to remove the layer if it was previously referenced but is no longer referenced
+        //if (lyrInfo.use) {
+        this._createLayerListItem(lyrInfo);
+        //} else{
+        //  this.removeMapLayer(lyrInfo.id);
+        //}
       }
       this.addMapLayers();
     },
@@ -394,16 +432,16 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
       var lyrType = this.layerList[layer.id].type;
       if (lyrType === "FeatureCollectionLayer" || lyrType === "StreamLayer") {
-        //this._addLegend(layer);
+        this._addLegend(layer);
         this.layerList[layer.id].dataLoader._node = recNum;
         this.layerList[layer.id].dataLoader.countFeatures();
       } else if (lyrType === "ClusterLayer") {
-        //this._addClusterLegend(layer, lyrInfo.imageData);
+        this._addClusterLegend(layer, lyrInfo.imageData);
         layer.node = recNum;
         layer.clusterFeatures();
       }
 
-      this._addLegend(layer)
+      //this._addLegend(layer)
 
       on(recIcon, "click", lang.hitch(this, this._toggleLayer, layer));
       on(rec, "click", lang.hitch(this, this._toggleLegend, layer));
@@ -423,6 +461,11 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         id: "legend_" + layer.id
       }, this.pageMain);
 
+      var symbolDiv2 = domConstruct.create("div", {
+        class: "clusterSymbol2",
+        id: "legend_symbol2_" + layer.id,
+      }, legendDiv);
+
       var legend = new Legend({
         "autoUpdate": false,
         "respectCurrentMapScale": true,
@@ -431,7 +474,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           "layer": layer
         }],
         "map": this.map
-      }, legendDiv);
+      }, symbolDiv2);
 
       legend.startup();
     },
@@ -442,13 +485,19 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         id: "legend_" + layer.id
       }, this.pageMain);
 
-      var symbolDiv = domConstruct.create("div", {
-        class: "clusterSymbol",
-        id: "legend_symbol_" + layer.id,
-        innerHTML: img
+      var symbolDiv2 = domConstruct.create("div", {
+        class: "clusterSymbol2",
+        id: "legend_symbol2_" + layer.id,
       }, legendDiv);
 
-      //this.legendNodes.push({node: symbolDiv, styleProp: "background-color"});
+      var symbolDiv = domConstruct.create("div", {
+        class: "clusterSymbol recImg2",
+        id: "legend_symbol_" + layer.id,
+        innerHTML: img
+      }, symbolDiv2);
+
+
+      this.legendNodes.push({ node: symbolDiv, styleProp: "background-color" });
     },
 
     _getClusterLayer: function (lyrInfo, lyr, lyrType, results, infoTemplate) {
@@ -573,10 +622,12 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         domClass.add("recIcon_" + id, "active");
         if (lyr) {
           lyr.layerObject.setVisibility(true);
-          if (lyr.type === 'ClusterLayer' || lyr.type === 'FeatureCollectionLayer') {
+          if (lyr.type === 'ClusterLayer') {
             //TODO still need to wrok on that
             lyr.layerObject.flashFeatures();
-          }
+        } else if(lyr.type === 'FeatureCollectionLayer'){
+          lyr.dataLoader.flashFeatures();
+        }
           this.layerList[obj.id].visible = true;
           if (typeof (lyr.pl) !== 'undefined') {
             lyr.pl.visibility = true;
@@ -665,6 +716,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       if (this.refreshInterval) {
         clearInterval(this.refreshInterval);
       }
+
+      this.popupSelectionChanged = null;
     },
 
     _clearChildNodes: function (parentNode) {

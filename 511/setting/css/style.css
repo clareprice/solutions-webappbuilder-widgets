@@ -1,13 +1,46 @@
 .jimu-widget-511-setting{
-  padding-top: 0px;
+  /*padding-top: 0px;
   padding-right: 5px;
   padding-bottom: 0px;
   padding-left: 5px;
-  font-size:14px;
+  font-size:14px;*/
+  width:100%;
+  height:100%;
 }
 
-/*.myIconOn {
-  background-image: url(../../images/delete_default.png);
+.jimu-widget-511-setting .btn-add-section {
+  display: inline-block;
+  overflow: hidden;
+  height: 24px;
+  margin-left: 1px;
+  margin-bottom: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #538ec8;
+  margin-top: 8px;
+}
+
+.jimu-widget-511-setting .btn-add-section .btn-add-icon {
+  height: 100%;
+  width: 14px;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-image: url(images/add.png);
+  display: inline-block;
+  vertical-align: top;
+}
+
+.jimu-widget-511-setting .btn-add-section .btn-add-label {
+  height: 100%;
+  line-height: 24px;
+  margin-left: 7px;
+  text-decoration: underline;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.addFilterOn {
+  background-image: url(images/add_default.png);
   background-repeat: no-repeat;
   background-color: transparent;
   width: 16px;
@@ -15,10 +48,12 @@
   text-align: center;
   color:transparent;
   cursor: pointer;
+  /*padding-left:10px;*/
+  /*float:right;*/
 }
 
-.myIconOn:hover {
-  background-image: url(../../images/delete_hover.png);
+.addFilterOn:hover {
+  background-image: url(images/add_hover.png);
   background-repeat: no-repeat;
   background-color: transparent;
   width: 16px;
@@ -26,7 +61,43 @@
   text-align: center;
   color:transparent;
   cursor: pointer;
-}*/
+  /*padding-left:10px;*/
+  /*float:right;*/
+}
+
+.removeFilterOn {
+  background-image: url(images/delete_default.png);
+  background-repeat: no-repeat;
+  background-color: transparent;
+  width: 16px;
+  height:16px;
+  text-align: center;
+  color:transparent;
+  cursor: pointer;
+  /*padding-left:10px;*/
+  /*float:right;*/
+  /*float:left;*/
+  
+}
+
+.removeFilterOn:hover {
+  background-image: url(images/delete_hover.png);
+  background-repeat: no-repeat;
+  background-color: transparent;
+  width: 16px;
+  height:16px;
+  text-align: center;
+  color:transparent;
+  cursor: pointer;
+  /*padding-left:10px;*/
+  /*float:right;*/
+  /*float:left;*/
+}
+
+.actions2{
+  /*margin-right: 30px;
+  float:right;*/
+}
 
 .thumb2{
     width:20px; 
@@ -74,14 +145,9 @@
   width: 200px;
 }
 
-.jimu-widget-511-setting .first-page{
-	position: relative;
-	/*height: 100%;*/
-}
-
 .jimu-widget-511-setting .table-layer-infos{
-	width: 100%;
-    height: 200px;
+	/*width: 100%;*/
+    /*height: 200px;*/
 	/*position: absolute;
 	top: 0;
 	bottom: 36px;*/
@@ -93,9 +159,9 @@
     height:50px;*/
 }
 
-.upload{
+/*.upload{
 margin-left:100px;
-}
+}*/
 
 .mainPanelIconEditClass{
 
@@ -105,9 +171,9 @@ margin-left:100px;
     /*background-color:red;
     width:50px;
     height:50px;*/
-   margin-left:50px;
+   /*margin-left:50px;
    align-items: center;
-   align-content:center;
+   align-content:center;*/
 }
 
 .panelContent {
@@ -292,4 +358,128 @@ margin-left:100px;
 	width: 227px;
 	height: 30px;
 	overflow: hidden;
+}
+
+/*.checkbox {
+  margin-left:12px;
+}*/
+
+/*from SA*/
+.claro .dojoxCheckedMultiSelect .dojoxCheckedMultiSelectWrapper {
+  border: none !important;
+  background-color: transparent !important;
+}
+
+.footer {
+  text-align: right;
+}
+
+.removeButtonWithIcon {
+  background-image: url("../images/filterdialog_icons.png");
+  background-repeat: no-repeat;
+  background-position: -30px 0;
+  width: 15px;
+  height: 15px;
+  margin: 0px 0px;
+  display: block;
+}
+
+.upButton {
+  background-image: url("../../../../jimu.js/css/images/up_enabled.png");
+  background-repeat: no-repeat;
+  width: 15px;
+  height: 15px;
+  margin: 0px 0px;
+  display: block;
+}
+
+.downButton {
+  background-image: url("../../../../jimu.js/css/images/down_enabled.png");
+  background-repeat: no-repeat;
+  width: 15px;
+  height: 15px;
+  margin: 0px 0px;
+  display: block;
+}
+
+.colorButton {
+  width: 15px;
+  height: 15px;
+  margin: 0px 0px;
+  display: block;
+  background-color: #00ff00;
+}
+
+.footer {
+  padding-top: 5px;
+  width: 100%;
+  height: 30px;
+}
+
+.dojoxCheckedMultiSelect .dojoxCheckedMultiSelectWrapper {
+  height: 400px;
+}
+
+.dojoxMultiSelectItem {
+  padding-bottom: 3px;
+  padding-top: 3px;
+}
+
+.dijitSelectLabel {
+    text-align:left;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width:300px;
+}
+
+.mainPanelPreview {
+  float:left; 
+  height:185px; 
+  padding:5px 5px 5px 5px;
+}
+
+.mainPanelPreviewButton {
+  float:left; 
+  padding:80px 15px 15px 15px;
+}
+
+.mainPanelPreviewContainer {
+  width:400px; 
+  height:220px; 
+  border: 5px dashed gray; 
+  float:left;
+}
+
+.mainPanelText {
+  width:100%;
+}
+
+.refreshOptionsContainer{
+  float:left; 
+  width:100%; 
+  padding:10px 10px 10px 10px;
+}
+
+.fileInput{
+  opacity:0; 
+  width:0px; 
+  height:0px;
+}
+
+.refreshCheckBox{
+  float:left; 
+  width:160px;
+}
+
+.refreshInterval{
+  float:left; 
+  width:350px;
+}
+
+.override-geocode-service-chooser-content {
+	width: 580px !important;
+	min-height: 150px !important;
+}
+.override-geocode-service-chooser-content .service-browser-container{
+	display: none;
 }

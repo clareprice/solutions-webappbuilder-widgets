@@ -75,7 +75,55 @@ define(['dojo/_base/declare',
         for (var ii = 0; ii < updateNodes.length; ii++) {
           domStyle.set(updateNodes[ii].node, updateNodes[ii].styleProp, this._styleColor);
         }
-        this.updateClusterLayerColors(this._options.layerList);
+        //this.updateClusterLayerColors(this._options.layerList);
+        this._testNewGetColors(this._options.layerList);
+      }
+    },
+
+    _testNewGetColors: function (layerList) {
+      var _rgb = this.hexToRgb(this._styleColor);
+      var r = _rgb.r;
+      var g = _rgb.g;
+      var b = _rgb.b;
+
+      var r1 = r;
+      var g1 = g
+      var b1 = b;
+
+      var colors = [];
+      for (var key in layerList) {
+        var l = layerList[key];
+        if (l.type === "ClusterLayer") {
+          if (colors.length > 0) {
+            var prevC = colors[colors.length - 1];
+
+            r1 = (r + prevC.r) / 2;
+            g1 = (g + prevC.g) / 2;
+            b1 = (b + prevC.b) / 2;
+
+            var prevColor = this.generateRandomComplementaryColor4(r1, g1, b1);
+            colors.push(prevColor);
+
+            r1 = prevColor.r;
+            g1 = prevColor.g;
+            b1 = prevColor.b;
+          } else {
+            var c = new Color();
+            c.r = r1;
+            c.b = b1;
+            c.g = g1;
+            colors.push(c);
+          }
+
+
+
+          l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
+          var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
+          if (typeof (legendNode) !== 'undefined') {
+            domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
+          }
+          l.layerObject.clusterFeatures();
+        }
       }
     },
 
@@ -126,10 +174,10 @@ define(['dojo/_base/declare',
           }
           xx = xx + xx;
           l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
-          //var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
-          //if (typeof (legendNode) !== 'undefined') {
-          //  domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
-          //}
+          var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
+          if (typeof (legendNode) !== 'undefined') {
+            domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
+          }
           l.layerObject.clusterFeatures();
         }
       }
@@ -212,6 +260,44 @@ define(['dojo/_base/declare',
       c.r = Math.round((r + red + red2) / 3);
       c.b = Math.round((b + blue + blue2) / 3);
       c.g = Math.round((g + green + green2) / 3);
+      return c;
+    },
+
+    //The following is not currently used but I may go back to this idea
+    generateRandomComplementaryColor4: function (r, g, b) {
+      var red = Math.floor((Math.random() * 256));
+      var green = Math.floor((Math.random() * 256));
+      var blue = Math.floor((Math.random() * 256));
+
+      //IE's Math.random is not random enough.
+      //TODO...try this as the default
+      if (!/MSIE 9/i.test(navigator.userAgent) && !/MSIE 10/i.test(navigator.userAgent) && !/rv:11.0/i.test(navigator.userAgent)) {
+        red = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
+        green = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
+        blue = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
+      };
+
+      var c = new Color();
+      c.r = red;
+      c.b = blue;
+      c.g = green;
+      return c;
+    },
+
+    //The following is not currently used but I may go back to this idea
+    generateRandomComplementaryColor5: function (r, g, b) {
+      var red = Math.floor((Math.random() * 256));
+      var green = Math.floor((Math.random() * 256));
+      var blue = Math.floor((Math.random() * 256));
+
+      var red2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
+      var green2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
+      var blue2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
+
+      var c = new Color();
+      c.r = red2;
+      c.b = blue2;
+      c.g = green2;
       return c;
     }
 

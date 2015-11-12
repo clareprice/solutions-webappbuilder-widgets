@@ -40,6 +40,8 @@ define([
     icon: null,
 
     constructor: function (options) {
+
+      this.clusterGraphics = null;
       this.cancelRequest = false;
       this.name = options.name;
       this.displayOnPan = options.displayOnPan || false;
@@ -47,6 +49,16 @@ define([
       this.clusterSize = options.clusterSize || 120;
       this.colorStr = options.color || '#ff0000';
       this.color = Color.fromString(this.colorStr);
+      /////////////////////////
+      this._singles = []; // populated when a graphic is clicked
+      //this._showSingles = options.hasOwnProperty("showSingles") ? options.showSingles : true;
+      this._showSingles = true;
+      var symColor = this.color.toRgb();
+      var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+      this._singleSym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+      //this._singleTemplate = options.singleTemplate || new PopupTemplate({ "title": "", "description": "{*}" });
+      this._maxSingles = options.maxSingles || 1000;
+      /////////////////////////
       this.icon = options.icon;
       this.node = options.node;
       this._features = options.features;
@@ -92,8 +104,58 @@ define([
 
     },
 
+    clearSingles: function (singles) {
+      // Summary:  Remove graphics that represent individual data points.
+      var s = singles || this._singles;
+      array.forEach(s, function (g) {
+        this.remove(g);
+      }, this);
+      this._singles.length = 0;
+    },
+
+    _addSingles: function (singles) {
+      // add single graphics to the map
+      //arrayUtils.forEach(singles, function (p) {
+      //  var g = new Graphic(
+      //    new Point(p.x, p.y, this._sr),
+      //    this._singleSym,
+      //    p.attributes,
+      //    this._singleTemplate
+      //  );
+      //  this._singles.push(g);
+      //  if (this._showSingles) {
+      //    this.add(g);
+      //  }
+      //}, this);
+      array.forEach(singles, function (p) {
+        var g = new Graphic(
+          new Point(p.geometry.x, p.geometry.y, this._map.spatialReference),
+          this._singleSym,
+          p.attributes
+        );
+        this._singles.push(g);
+        if (this._showSingles) {
+          this.add(g);
+        }
+      }, this);
+      this._map.infoWindow.setFeatures(this._singles);
+    },
+
+    initalCount: function (url) {
+      var q = new Query();
+      q.returnGeometry = false;
+      q.geometry = this._map.extent;
+      var qt = new QueryTask(url);
+      qt.executeForIds(q).then(lang.hitch(this, function (results) {
+        if (this.node) {
+          this.node.innerHTML = results.length;
+        }
+      }));
+    },
+
     loadData: function (url) {
       if (url.length > 0) {
+        this.initalCount(url);
         var q = new Query();
         q.where = "1=1";
         q.returnGeometry = false;
@@ -176,8 +238,24 @@ define([
 
     //click
     handleClick: function (event) {
-      var gra = event.graphic;
-      this._map.infoWindow.setFeatures(gra.attributes.Data);
+      var singles = [];
+
+      if (event.graphic) {
+        var g = event.graphic;
+        if (g.attributes) {
+          var attr = g.attributes;
+          if (attr.Data) {
+            this.clearSingles(this._singles);
+            singles = attr.Data
+            event.stopPropagation();
+            this._addSingles(singles);
+            this._map.infoWindow.setFeatures(attr.Data);
+          } else {
+            this._map.infoWindow.setFeatures([g]);     
+          }
+        }
+      }
+
       this._map.infoWindow.show(event.mapPoint);
       //this._map.infoWindow.maximize();
       dojoEvent.stop(event);
@@ -203,6 +281,59 @@ define([
     },
 
     flashFeatures: function () {
+      this.flashGraphics(this.graphics);
+      //var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, this.color, 7);
+      //var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, this.color, 3);
+
+      //var cls4 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+      //var x = 0;
+
+      //clearInterval(this.s);
+
+      //this.s = setInterval(lang.hitch(this, function () {
+      //  for (var i = 0; i < this.graphics.length; i++) {
+      //    var g = this.graphics[i];
+      //    if (x % 2) {
+      //      var s = g.symbol;
+      //      if (typeof (s.setOutline) === 'function') {
+      //        s.setOutline(cls)
+      //      }
+      //      g.setSymbol(s);
+      //    } else {
+      //      var s = g.symbol;
+      //      if (typeof (s.setOutline) === 'function') {
+      //        s.setOutline(cls2)
+      //      }
+      //      g.setSymbol(s);
+      //    }
+      //  }
+      //  this.redraw();
+      //  x = x + 1;
+      //  if (x == 5) {
+      //    clearInterval(this.s);
+      //    for (var i = 0; i < this.graphics.length; i++) {
+      //      var g = this.graphics[i];
+      //      var s = g.symbol;
+      //      if (typeof (s.setOutline) === 'function') {
+      //        s.setOutline(cls4)
+      //      }
+      //      g.setSymbol(s);
+      //    }
+      //    this.redraw();
+      //  }
+      //}), 600);
+    },
+
+    flashSingle: function (graphic) {
+      if (typeof (graphic.symbol) === 'undefined') {
+        var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+        var symColor = this.color.toRgb();
+        graphic.setSymbol(new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5])));
+      }
+      this.flashGraphics([graphic]);
+    },
+
+    flashGraphics: function (graphics) {
       var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, this.color, 7);
       var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, this.color, 3);
 
@@ -212,8 +343,8 @@ define([
       clearInterval(this.s);
 
       this.s = setInterval(lang.hitch(this, function () {
-        for (var i = 0; i < this.graphics.length; i++) {
-          var g = this.graphics[i];
+        for (var i = 0; i < graphics.length; i++) {
+          var g = graphics[i];
           if (x % 2) {
             var s = g.symbol;
             if (typeof (s.setOutline) === 'function') {
@@ -232,8 +363,8 @@ define([
         x = x + 1;
         if (x == 5) {
           clearInterval(this.s);
-          for (var i = 0; i < this.graphics.length; i++) {
-            var g = this.graphics[i];
+          for (var i = 0; i < graphics.length; i++) {
+            var g = graphics[i];
             var s = g.symbol;
             if (typeof (s.setOutline) === 'function') {
               s.setOutline(cls4)
@@ -282,7 +413,7 @@ define([
         if (features.length > 0) {
 
           var clusterSize = this.clusterSize;
-          var clusterGraphics = new Array();
+          this.clusterGraphics = new Array();
           var sr = this._map.spatialReference;
           var mapExt = this._map.extent;
           var o = new Point(mapExt.xmin, mapExt.ymax, sr);
@@ -311,7 +442,7 @@ define([
               }
               if (cGraphics.length > 0) {
                 var cPt = this.getClusterCenter(cGraphics);
-                clusterGraphics.push({
+                this.clusterGraphics.push({
                   center: cPt,
                   graphics: cGraphics
                 });
@@ -320,20 +451,18 @@ define([
           }
 
           //add cluster to map
-          for (var g in clusterGraphics) {
-            var clusterGraphic = clusterGraphics[g];
+          for (var g in this.clusterGraphics) {
+            var clusterGraphic = this.clusterGraphics[g];
             var count = clusterGraphic.graphics.length;
             var data = clusterGraphic.graphics;
             var size = 40 + parseInt(count / 40);
             var size2 = size - (size / 4);
             var symColor = this.color.toRgb();
             var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-            //var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([255, 255, 255]), 2);
             var csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
             var psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
             var psym2 = new PictureMarkerSymbol(this.icon, size2 - 13, size2 - 13);
             var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-            //var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([255, 255, 255]), 1);
             var csym2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size2, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
 
             var attr = {

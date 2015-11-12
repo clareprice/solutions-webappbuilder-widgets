@@ -26,8 +26,14 @@ define([
     'jimu/dijit/SimpleTable',
     'jimu/LayerInfos/LayerInfos',
     'dijit/form/Button',
+    'dijit/form/Select',
+    'dijit/form/ValidationTextBox',
+    'dijit/form/CheckBox',
     'jimu/dijit/Message',
     "jimu/dijit/LoadingShelter",
+    'jimu/dijit/Filter',
+    'jimu/dijit/Popup',
+    'jimu/dijit/_FeaturelayerServiceChooserContent',
     "dijit/TooltipDialog",
     "dijit/popup",
     'dojo/_base/lang',
@@ -52,8 +58,14 @@ define([
     Table,
     LayerInfos,
     Button,
+    Select,
+    ValidationTextBox,
+    CheckBox,
     Message,
     LoadingShelter,
+    Filter,
+    Popup,
+    _FeaturelayerServiceChooserContent,
     TooltipDialog,
     dijitPopup,
     lang,
@@ -74,126 +86,14 @@ define([
       layer_options: [],
 
       postCreate: function () {
+        this.inherited(arguments);
+        this._getAllLayers();
+        this.own(on(this.btnAddLayer, 'click', lang.hitch(this, this._addLayerRow)));
+        this.own(on(this.tabTable, 'actions-edit', lang.hitch(this, this._editIcon)));
       },
 
       startup: function () {
         this.inherited(arguments);
-
-        if (!this.config.layerInfos) {
-          this.config.layerInfos = [];
-        }
-        this._layerInfos = [];
-        this._tableInfos = [];
-
-        //Thinking about moving these to the html to avoid the clutter below
-        //var fields = [{ name: 'use', title: this.nls.useColumnText, width: '5px', type: 'checkbox', 'class': 'use' }, { name: 'upload', title: '', width: '5px', type: 'actions', 'class': 'upload', actions: ['edit'] }, { name: 'image', title: this.nls.iconColumnText, width: '8px', type: 'empty', hidden: false, 'class': 'imageTest' }, { name: 'imageData', title: '', type: 'text', hidden: true, width: '0px' }, { name: 'order', title: '', width: '5px', type: 'actions', 'class': 'order', actions: ['up', 'down'] }, { name: 'label', title: this.nls.nameText, width: '50px', type: 'text', editable: true, 'class': 'editText' }, { name: 'url', title: '', type: 'text', width: '0px', hidden: true }, { name: 'type', title: '', width: '15px', type: 'text', hidden: true }, { name: 'id', title: '', type: 'text', width: '0px', hidden: true }];
-
-        var fields = [{
-          name: 'use',
-          title: this.nls.useColumnText,
-          width: '5px',
-          type: 'checkbox',
-          'class': 'use'
-        }, {
-          name: 'upload',
-          title: '',
-          width: '5px',
-          type: 'actions',
-          'class': 'upload',
-          actions: ['edit']
-        }, {
-          name: 'image',
-          title: this.nls.iconColumnText,
-          width: '8px',
-          type: 'empty',
-          hidden: false,
-          'class': 'imageTest'
-        }, {
-          name: 'imageData',
-          title: '',
-          type: 'text',
-          hidden: true,
-          width: '0px'
-        }, {
-          name: 'order',
-          title: '',
-          width: '5px',
-          type: 'actions',
-          'class': 'order',
-          actions: ['up', 'down']
-        }, {
-          name: 'label',
-          title: this.nls.labelColumnText,
-          width: '50px',
-          type: 'text',
-          editable: true,
-          'class': 'editText'
-        }, {
-          name: 'url',
-          title: '',
-          type: 'text',
-          width: '0px',
-          hidden: true
-        }, {
-          name: 'type',
-          title: '',
-          width: '15px',
-          type: 'text',
-          hidden: true
-        }, {
-          name: 'id',
-          title: '',
-          type: 'text',
-          width: '0px',
-          hidden: true
-        }];
-
-        var args = {
-          fields: fields,
-          selectable: false,
-          autoHeight: false
-        };
-        this.displayFieldsTable = new Table(args);
-        this.displayFieldsTable.placeAt(this.tableLayerInfos);
-        html.setStyle(this.displayFieldsTable.domNode, {
-          'height': '100%'
-        });
-        this.displayFieldsTable.startup();
-
-        this.own(on(this.displayFieldsTable, 'actions-edit', lang.hitch(this, function (tr) {
-          var reader = new FileReader();
-          reader.onload = lang.hitch(this, function () {
-            //clear out any old values
-            //TODO...is this a vaid way to do this?
-            tr.cells[2].innerHTML = "<div></div>";
-            tr.cells[3].innerHTML = "<div></div>";
-
-            var a = domConstruct.create("div", {
-              class: "thumb2",
-              innerHTML: ['<img class="thumb2" src="', reader.result, '"/>'].join(''),
-              title: this.nls.iconColumnText
-            }, tr.cells[2]);
-
-            var r = this.displayFieldsTable.editRow(tr, { imageData: a.innerHTML });
-          });
-
-          this.fileInput.onchange = lang.hitch(this, function () {
-            var f = this.fileInput.files[0];
-            reader.readAsDataURL(f);
-          });
-
-          this.fileInput.click();
-        }
-        )));
-
-        this.shelter = new LoadingShelter({
-          hidden: true
-        });
-        this.shelter.placeAt(this.domNode.parentNode.parentNode || this.domNode);
-        this.shelter.startup();
-        this.shelter.show();
-
-        this.setConfig(this.config);
       },
 
       uploadImage: function () {
@@ -217,13 +117,7 @@ define([
 
       setConfig: function (config) {
         this.config = config;
-        this._initConfigProps();
-        this.displayFieldsTable.clear();
-        this._getAllLayers();
-
-      },
-
-      _initConfigProps: function () {
+        
         this.cbxRefreshEnabled.onChange = lang.hitch(this, function (val) {
           this.refreshInterval.disabled = !val;
           this.refreshInterval.readOnly = !val;
@@ -248,6 +142,296 @@ define([
         if (this.config.refreshInterval) {
           this.refreshInterval.set('value', this.config.refreshInterval);
         }
+
+        this.tabTable.clear();
+        for (var i = 0; i < this.config.layerInfos.length; i++) {
+          var lyrInfo = this.config.layerInfos[i];
+          this._populateLayerRow(lyrInfo);
+        }
+      },
+
+      _editIcon: function (tr) {
+        var reader = new FileReader();
+        reader.onload = lang.hitch(this, function () {
+          tr.cells[3].innerHTML = "<div></div>";
+
+          var a = domConstruct.create("div", {
+            class: "thumb2",
+            innerHTML: ['<img class="thumb2" src="', reader.result, '"/>'].join(''),
+            title: this.nls.iconColumnText
+          }, tr.cells[3]);
+
+          var r = this.tabTable.editRow(tr, {
+            imageData: a.innerHTML
+          });
+        });
+
+        this.fileInput.onchange = lang.hitch(this, function () {
+          var f = this.fileInput.files[0];
+          reader.readAsDataURL(f);
+        });
+
+        this.fileInput.click();
+      },
+
+      _populateLayerRow: function (lyrInfo) {
+        var result = this.tabTable.addRow({});
+        if (result.success && result.tr) {
+          var tr = result.tr;
+          this._addLayersOption(tr);
+          this._addLabelOption(tr);
+          this._addRefreshOption(tr);
+          this._addFilterOption(tr);
+          this._updateActions(tr);
+          tr.selectLayers.set("value", lyrInfo.layer);
+          tr.labelText.set("value", lyrInfo.label);
+          tr.refreshBox.set("checked", lyrInfo.refresh);
+          
+          var a = domConstruct.create("div", {
+            class: "thumb2",
+            innerHTML: [lyrInfo.imageData],
+            title: this.nls.iconColumnText
+          }, tr.cells[3]);
+
+          var cLo = this._getLayerOptionByValue(lyrInfo.layer);
+          cLo.filter = lyrInfo.filter;
+          cLo.imageData = lyrInfo.imageData;
+        }
+      },
+
+      _addLayerRow: function () {
+        var result = this.tabTable.addRow({});
+        if (result.success && result.tr) {
+          var tr = result.tr;
+          this._addLayersOption(tr);
+          this._addLabelOption(tr);
+          this._addRefreshOption(tr);
+          this._addFilterOption(tr);
+          this._updateActions(tr);
+        }
+      },
+
+      _updateActions: function (tr) {
+        //var td = query('.actions2', tr)[0];
+        //html.setStyle(td, "margin-right", "4px");
+        //html.setStyle(td, "padding-top", "8px");
+      },
+
+      _addLayersOption: function (tr) {
+        var lyrOptions = lang.clone(this.layer_options);
+        var td = query('.simple-table-cell', tr)[0];
+        if (td) {
+          html.setStyle(td, "verticalAlign", "middle");
+          var tabLayers = new Select({
+            style: {
+              width: "100%",
+              height: "28px"
+            },
+            options: lyrOptions
+          });
+          tabLayers.placeAt(td);
+          tabLayers.startup();
+          tr.selectLayers = tabLayers;
+        }
+      },
+
+      _addLabelOption: function (tr) {
+        var td = query('.simple-table-cell', tr)[1];
+        html.setStyle(td, "verticalAlign", "middle");
+        var labelTextBox = new ValidationTextBox({
+          style: {
+            width: "100%",
+            height: "28px"
+          }
+        });
+        labelTextBox.placeAt(td);
+        labelTextBox.startup();
+        tr.labelText = labelTextBox;
+      },
+
+      _addRefreshOption: function (tr) {
+        var td = query('.simple-table-cell', tr)[5];
+        html.setStyle(td, "verticalAlign", "middle");
+        var refreshCheckBox = new CheckBox({
+          //style: {
+          //  "padding-left": "10px"
+          //},
+          onChange: lang.hitch(this, function (v) {
+            //TODO has to be a better way to do this 
+            // just need to know the row the hosts the cbx so we can get the layer value and 
+            //The other thought would be to do the type check while first adding the row
+            //Then here we'd just need to check if this row has a url...if not then do the popup
+            //that may be better....
+            if (v) {
+              var ae = this.domNode.ownerDocument.activeElement;
+              var value = ae.parentNode.parentNode.parentNode.selectLayers.value;
+              var lyrInfo = this._getLayerOptionByValue(value);
+
+              if (typeof (lyrInfo.url) !== 'undefined' && lyrInfo.url !== '') {
+                //alert("Has URL already");
+                this.activeLayerInfo = lyrInfo;
+                this._onSetLocatorUrlClick();
+              } else {
+                //show popup to get the url
+                //alert("Need to get a url here through a Popup");
+              }
+            }
+          })
+        });
+        refreshCheckBox.placeAt(td);
+        refreshCheckBox.startup();
+        tr.refreshBox = refreshCheckBox;
+      },
+
+      _onSetLocatorUrlClick: function () {
+        var ac = this.appConfig;
+
+        this.serviceChooserContent = new _FeaturelayerServiceChooserContent({
+          url: ""
+        });
+        this.shelter = new LoadingShelter({
+          hidden: true
+        });
+
+        this.urlChooserPopup = new Popup({
+          titleLabel: this.nls.urlPopupTitle,
+          autoHeight: true,
+          content: this.serviceChooserContent.domNode,
+          container: window.jimuConfig.layoutId,
+          width: 640
+        });
+        this.shelter.placeAt(this.urlChooserPopup.domNode);
+        html.setStyle(this.serviceChooserContent.domNode, 'width', '580px');
+        html.addClass(
+          this.serviceChooserContent.domNode,
+          'override-feature-service-chooser-content'
+        );
+
+        this.serviceChooserContent.own(
+          on(this.serviceChooserContent, 'validate-click', lang.hitch(this, function () {
+            html.removeClass(
+              this.serviceChooserContent.domNode,
+              'override-feature-service-chooser-content'
+            );
+          }))
+        );
+        this.serviceChooserContent.own(
+          on(this.serviceChooserContent, this.nls.popupOk, lang.hitch(this, this._onSelectLocatorUrlOk))
+        );
+        this.serviceChooserContent.own(
+          on(this.serviceChooserContent, this.nls.popupCancel, lang.hitch(this, this._onSelectLocatorUrlCancel))
+        );
+      },
+
+      _onSelectLocatorUrlOk: function (evt) {
+        if (!(evt && evt[0] && evt[0].url && this.domNode)) {
+          return;
+        }
+        this.shelter.show();
+        esriRequest({
+          url: evt[0].url,
+          content: {
+            f: 'json'
+          },
+          handleAs: 'json',
+          callbackParamName: 'callback'
+        }).then(lang.hitch(this, function (response) {
+          this.shelter.hide();
+          if (response) {
+            this.activeLayerInfo.url = evt[0].url;
+            if (this.urlChooserPopup) {
+              this.urlChooserPopup.close();
+              this.urlChooserPopup = null;
+            }
+          } else {
+            new Message({
+              message: this.nls.invalidUrlTip
+            });
+          }
+        }), lang.hitch(this, function (err) {
+          console.error(err);
+          this.shelter.hide();
+          new Message({
+            message: this.nls.invalidUrlTip
+          });
+        }));
+      },
+
+      _onSelectLocatorUrlCancel: function () {
+        if (this.urlChooserPopup) {
+          this.urlChooserPopup.close();
+          this.urlChooserPopup = null;
+        }
+      },
+
+      _addFilterOption: function (tr) {
+        var td = query('.simple-table-cell', tr)[4];
+        var addFilterBtn = domConstruct.create("div", {
+          class: "addFilterOn",
+          title: this.nls.filterBtnTitle
+        }, td);
+        on(addFilterBtn, "click", lang.hitch(this, function (m) {
+          var lo = this._getLayerOptionByValue(m.children[0].textContent);
+          this._showFilter(lo.url);
+        }, tr));
+      },
+
+      _getLayerOptionByValue: function (value) {
+        for (var i = 0; i < this.layer_options.length; i++) {
+          var lo = this.layer_options[i];
+          if (lo.value === value) {
+            return lo;
+          }
+        }
+      },
+
+      _getLayerOptionByURL: function (url) {
+        for (var i = 0; i < this.layer_options.length; i++) {
+          var lo = this.layer_options[i];
+          if (lo.url === url) {
+            return lo;
+          }
+        }
+      },
+
+      _showFilter: function (url) {
+        var filter = new Filter({
+          noFilterTip: this.nls.noFilterTip,
+          style: "width:100%;margin-top:22px;"
+        });
+
+        var filterPopup = new Popup({
+          titleLabel: this.nls.filterPopupTitle,
+          width: 680,
+          height: 485,
+          content: filter,
+          buttons: [{
+            label: this.nls.filterPopupOk,
+            onClick: lang.hitch(this, function () {
+              var partsObj = filter.toJson();
+              if (partsObj && partsObj.expr) {
+                var lo = this._getLayerOptionByURL(filter.url);
+                lo.filter = partsObj;
+                filterPopup.close();
+                filterPopup = null;
+              } else {
+                new Message({
+                  message: this.nls.filterInvalid
+                });
+              }
+            })
+          }, {
+            label: this.nls.filterPopupCancel
+          }]
+        });
+
+        var lyrO = this._getLayerOptionByURL(url);
+        if (lyrO.hasOwnProperty('filter')) {
+          filterObj = lyrO.filter;
+          filter.buildByFilterObj(url, filterObj, null);
+        } else {
+          filter.buildByExpr(url, null, null);
+        }
       },
 
       _getAllLayers: function () {
@@ -256,102 +440,9 @@ define([
             .then(lang.hitch(this, function (operLayerInfos) {
               this.opLayers = operLayerInfos;
               this._setLayers();
-              this._initLayers();
+              this.setConfig(this.config);
             }));
         }
-      },
-
-      _initLayers: function () {
-        //need the table to come in the correct order
-        var layerIDs = [];
-        var configLayers = [];
-        
-        //TODO...if map service layer object is in the middle of hosted layers 
-        // will want to update this so that it would show in the correct order...right now it will append 
-        // map service sub layers after hoseted map layers
-
-        var mapLayerIDs = this.map.graphicsLayerIds;
-        if (typeof (this.config.layerInfos) !== 'undefined' && this.config.layerInfos.length > 0) {
-          for (var ii = 0; ii < this.config.layerInfos.length ; ii++) {
-            var id = this.config.layerInfos[ii].id;
-            //only add ID if it's in the map
-            if (mapLayerIDs.indexOf(id) > -1) {
-              configLayers.push(id);
-            }
-          }
-          for (var i = mapLayerIDs.length - 1; i >= 0; i--) {
-            var lID = mapLayerIDs[i];
-            //add layers that may have been added to the map after the config was written
-            if (!(configLayers.indexOf(lID) > -1)) {
-              configLayers.push(lID);
-            }
-          }
-          layerIDs = configLayers.reverse();
-          layerIDs = configLayers;
-        } else {
-          layerIDs = this.map.graphicsLayerIds;
-        }
-
-        //var len = layerIDs.length;
-        ////for (var i = 0; i < len; i++) {
-        //var options = [];
-        //for(var i = len - 1; i >= 0; i--){
-        //  var layer = this.map.getLayer(layerIDs[i]);
-        //  if (layer.type === "Feature Layer" || typeof (layer.socket) !== 'undefined') {
-        //    //get layerInfo from config if it exists...get it from the map layer if not
-        //    var layerInfo = this._getLayerInfoByID(layer, this.config.layerInfos);
-        //    this._layerInfos.push(layerInfo);
-
-        //    //TODO...see if I can get this where layerInfo would be a straight dump of the row
-        //    /// rather than creating this nearly duplicate object
-        //    var row = this.displayFieldsTable.addRow({
-        //      label: layerInfo.label,
-        //      url: layerInfo.url,
-        //      use: layerInfo.use,
-        //      imageData: layerInfo.imageData,
-        //      id: layerInfo.id,
-        //      type: layerInfo.type
-        //    });
-
-        //    if (layerInfo.imageData) {
-        //      domConstruct.create("div", {
-        //        class: "thumb2",
-        //        innerHTML: [layerInfo.imageData]
-        //      }, row.tr.cells[2]);
-        //    }
-        //  }
-        //}
-
-        if (this.layer_options.length > 0) {
-          for (var i = 0; i < this.layer_options.length; i++) {
-            var op = this.layer_options[i];
-            var o = this._getLayerInfoByID(op, this.config.layerInfos);
-            this._layerInfos.push(o);
-            var row = this.displayFieldsTable.addRow({
-              label: o.label,
-              url: o.url,
-              use: o.use,
-              imageData: o.imageData,
-              id: o.id,
-              type: o.type
-            });
-
-            if (o.imageData) {
-              domConstruct.create("div", {
-                class: "thumb2",
-                innerHTML: [o.imageData]
-              }, row.tr.cells[2]);
-            }
-          }
-        }
-
-        if (this._layerInfos.length === 0) {
-          domStyle.set(this.tableEditInfosError, "display", "");
-          this.tableEditInfosError.innerHTML = this.nls.noLayers;
-        } else {
-          domStyle.set(this.tableEditInfosError, "display", "none");
-        }
-        this.shelter.hide();
       },
 
       _recurseOpLayers: function (pNode, pOptions) {
@@ -366,6 +457,7 @@ define([
           } else {
             pOptions.push({
               label: Node.title,
+              value: Node.title,
               url: Node.layerObject ? Node.layerObject.url : "",
               use: Node.use,
               imageData: Node.imageData,
@@ -378,32 +470,6 @@ define([
       },
 
       _setLayers: function () {
-        //TODO need a way to get new layers that have been added to the map after the config was written
-        if (this.config.layerInfos.length > 0) {
-          this._loadConfig();
-        } else {
-          this._loadNew();
-        }
-      },
-
-      _loadConfig: function () {
-        var options = [];
-        for (var i = 0; i < this.config.layerInfos.length; i++) {
-          var OpLyr = this.config.layerInfos[i];
-          options.push({
-            label: OpLyr.label,
-            url: OpLyr.url,
-            use: OpLyr.use,
-            imageData: OpLyr.imageData,
-            id: OpLyr.id,
-            type: OpLyr.type,
-            lyrObj: OpLyr.lyrObj ? OpLyr.lyrObj : null
-          });         
-        }
-        this.layer_options = lang.clone(options);
-      },
-
-      _loadNew: function () {
         var options = [];
         for (var i = 0; i < this.opLayers._layerinfos.length; i++) {
           var OpLyr = this.opLayers._layerinfos[i];
@@ -415,8 +481,19 @@ define([
               this._recurseOpLayers(OpLyr.layers, options);
             }
           } else {
-            options.unshift({
+            //options.unshift({
+            //  label: OpLyr.title,
+            //  value: OpLyr.title,
+            //  url: OpLyr.layerObject.url,
+            //  use: OpLyr.use,
+            //  imageData: OpLyr.imageData,
+            //  id: OpLyr.id,
+            //  type: OpLyr.type,
+            //  lyrObj: Node.layerObject
+            //});
+            options.push({
               label: OpLyr.title,
+              value: OpLyr.title,
               url: OpLyr.layerObject.url,
               use: OpLyr.use,
               imageData: OpLyr.imageData,
@@ -451,6 +528,7 @@ define([
 
         var newLayerInfo = {
           label: label,
+          value: label,
           layer: layer.lyrObj,
           use: false,
           imageData: null,
@@ -485,51 +563,36 @@ define([
         return title;
       },
 
-      _destroyPopupDialog: function () {
-        dijitPopup.close();
-      },
-
-      destroy: function () {
-        this.inherited(arguments);
-      },
-
-      onOpen: function () {
-        if (!this.showing && this._isOnlyTable()) {
-          this._openTable();
-        }
-      },
-
-      //When user click's 'OK'
       getConfig: function () {
         dijitPopup.close();
 
-        var data = this.displayFieldsTable.getData();
+        var rows = this.tabTable.getRows();
         var table = [];
-        if (this.config && this.config.layerInfos && this.config.layerInfos.length > 0) {
-          array.forEach(data, lang.hitch(this, function (tData, idx) {
-            tData = tData; // do nothing
-            var lInfo = this.config.layerInfos[idx];
-            var json = {};
-            json.label = data[idx].label;
-            json.id = data[idx].id;
-            json.type = data[idx].type;
-            json.use = data[idx].use;
-            json.imageData = data[idx].imageData;
-            json.url = data[idx].url;
-            table.push(json);
-          }));
-        } else {
-          for (var i = 0; i < data.length; i++) {
-            var json = {};
-            json.label = data[i].label;
-            json.id = data[i].id;
-            json.type = data[i].type;
-            json.imageData = data[i].imageData;
-            json.use = data[i].use;
-            json.url = data[i].url;
-            table.push(json);
+        var lInfo;
+        array.forEach(rows, lang.hitch(this, function (tr) {        
+          var selectLayersValue = tr.selectLayers.value;
+
+          var labelText = tr.labelText;
+          var refreshBox = tr.refreshBox;
+          var lo = this._getLayerOptionByValue(selectLayersValue);
+
+          lInfo = {
+            layer: selectLayersValue,
+            label: labelText.value !== "" ? labelText.value : selectLayersValue,
+            refresh: refreshBox.checked,
+            filter: lo.filter,
+            url: lo.url,
+            type: lo.type,
+            id: lo.id
+          };
+
+          var td = query('.thumb2', tr)[0];
+          if (typeof (td) !== 'undefined') {
+            lInfo.imageData = td.innerHTML;
           }
-        }
+
+          table.push(lInfo);
+        }));
 
         this.config.layerInfos = table;
         this.config.mainPanelText = this.mainPanelText.value;
@@ -544,6 +607,10 @@ define([
         this._destroyPopupDialog();
 
         this.inherited(arguments);
+      },
+
+      _destroyPopupDialog: function () {
+        dijitPopup.close();
       }
 
     });

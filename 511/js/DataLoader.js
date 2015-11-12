@@ -19,6 +19,7 @@ define([
    'dojo/_base/array',
    'dojo/_base/event',
    'dojo/_base/lang',
+   'dojo/_base/Color',
    'dojo/on',
    'dojo/DeferredList',
    'esri/layers/FeatureLayer',
@@ -27,11 +28,12 @@ define([
    'esri/geometry/Extent',
    'esri/request',
    'esri/tasks/query',
-   'esri/tasks/QueryTask'
+   'esri/tasks/QueryTask',
+   'esri/symbols/SimpleLineSymbol'
 ],
 
-function (declare, array, dojoEvent, lang, on, DeferredList,
-  FeatureLayer, Graphic, SpatialReference, Extent, esriRequest, Query, QueryTask) {
+function (declare, array, dojoEvent, lang, Color, on, DeferredList,
+  FeatureLayer, Graphic, SpatialReference, Extent, esriRequest, Query, QueryTask, SimpleLineSymbol) {
   var dataLoader = declare(null, {
     //Loads data from parent layers url to a new layer instance
     // handles updating of the counter node in the widgets panel for this item
@@ -186,7 +188,7 @@ function (declare, array, dojoEvent, lang, on, DeferredList,
     },
 
     loadDataFromFeatureCollection: function () {
-      //supports direct load of inital data fromFeatureCollection layer in the map
+      //load inital data fromFeatureCollection layer in the map
       this.mapLayer.clear();
       var sr = this._map.spatialReference;
       for (var i = 0; i < this._features.length; i++) {
@@ -218,8 +220,22 @@ function (declare, array, dojoEvent, lang, on, DeferredList,
       }
     },
 
+    initalCount: function (url) {
+      var q = new Query();
+      q.returnGeometry = false;
+      q.geometry = this._map.extent;
+      var qt = new QueryTask(url);
+      qt.executeForCount(q).then(lang.hitch(this, function (cnt) {
+        if (this._node) {
+          this._node.innerHTML = cnt;
+        }
+      }));
+    },
+
     loadData: function (url) {
       if (url.length > 0) {
+        //get a quick inital count while the graphics are being retrieved
+        this.initalCount(url);
         var q = new Query();
         q.where = "1=1";
         q.returnGeometry = false;
@@ -287,17 +303,6 @@ function (declare, array, dojoEvent, lang, on, DeferredList,
                     }
                   }
 
-                  //TODO this is a sloppy workaround until I get all the timing correct
-                  if (this._map.graphicsLayerIds.indexOf(this.mapLayer.id) === -1) {
-                    //this._map.addLayer(this.mapLayer);
-
-                    //check re-order layers
-
-                  }
-
-                  //TODO need a better way for this...only want to do this once after they have all been added
-                  //this.p.reOrderMapLayers();
-
                   //if (JSON.stringify(this._features) !== JSON.stringify(fs)) {
                   //this.graphics = fs;
                   this.countFeatures();
@@ -360,6 +365,10 @@ function (declare, array, dojoEvent, lang, on, DeferredList,
         name: this.name,
         infoTemplate: this._infoTemplate
       });
+
+      if (this._renderer) {
+        this.mapLayer.setRenderer(this._renderer);
+      }
     },
 
     refreshFeatures: function (url) {
@@ -371,45 +380,43 @@ function (declare, array, dojoEvent, lang, on, DeferredList,
     },
 
     flashFeatures: function () {
-      var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([255, 0, 0]), 10);
-      var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0, 255, 0]), 5);
-      var cls3 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-      var x = 0;
+      //var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([255, 0, 0]), 10);
+      //var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0, 255, 0]), 5);
+      //var cls3 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+      //var x = 0;
 
-      this.s = setInterval(lang.hitch(this, function () {
-        for (var i = 0; i < this.graphics.length; i++) {
-          var g = this.graphics[i];
-          if (x % 2) {
-            var s = g.symbol;
-            if (typeof (s.setOutline) === 'function') {
-              s.setOutline(cls)
-            }
-            g.setSymbol(s);
-          } else {
-            var s = g.symbol;
-            if (typeof (s.setOutline) === 'function') {
-              s.setOutline(cls2)
-            }
-            g.setSymbol(s);
-          }
-        }
-        this.redraw();
-        x = x + 1;
-        if (x == 5) {
-          clearInterval(this.s);
-          for (var i = 0; i < this.graphics.length; i++) {
-            var g = this.graphics[i];
-            var s = g.symbol;
-            s.setOutline(cls3)
-            g.setSymbol(s);
-          }
-          this.redraw();
-        }
-      }), 500);
+      //this.s = setInterval(lang.hitch(this, function () {
+      //  for (var i = 0; i < this.graphics.length; i++) {
+      //    var g = this.graphics[i];
+      //    if (x % 2) {
+      //      var s = g.symbol;
+      //      if (typeof (s.setOutline) === 'function') {
+      //        s.setOutline(cls)
+      //      }
+      //      g.setSymbol(s);
+      //    } else {
+      //      var s = g.symbol;
+      //      if (typeof (s.setOutline) === 'function') {
+      //        s.setOutline(cls2)
+      //      }
+      //      g.setSymbol(s);
+      //    }
+      //  }
+      //  this.redraw();
+      //  x = x + 1;
+      //  if (x == 5) {
+      //    clearInterval(this.s);
+      //    for (var i = 0; i < this.graphics.length; i++) {
+      //      var g = this.graphics[i];
+      //      var s = g.symbol;
+      //      s.setOutline(cls3)
+      //      g.setSymbol(s);
+      //    }
+      //    this.redraw();
+      //  }
+      //}), 500);
     },
 
-    //may not do it this way in favor of the graphic node add/remove way
-    //I would bet that the node add/remove is much faster with large data
     countFeatures: function (event) {
       var q = new Query();
       q.geometry = this._map.extent;
