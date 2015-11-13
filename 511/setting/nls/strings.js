@@ -21,11 +21,14 @@ define({
     uploadImage: "Upload Image",
     iconColumnText: "Icon",
     labelColumnText: "Display Name",
-    refreshEnabled: "Enable Refresh",
     refreshInterval: "5 'Evaluated as time in Minutes'",
     noLayers: "No feature layers are available",
     mainPanelText: "Main Panel Text",
-    mainPanelIcon: "Main Panel Image"  
+    mainPanelIcon: "Main Panel Image",
+    refreshIntervalInstruction: "Refresh Interval",
+    downloadRefreshConfig: "Download Config",
+    downloadRefreshScript: "Download Script",
+    optionsText: "Options"
   },
   "ar": false,
   "cs": false,

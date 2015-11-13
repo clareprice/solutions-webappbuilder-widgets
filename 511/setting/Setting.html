@@ -4,7 +4,7 @@
       <span class="btn-add-icon"></span>
       <span class="btn-add-label">${nls.addLayer}</span>
     </div>
-    <div data-dojo-attach-point="tabTable" data-dojo-type="jimu/dijit/SimpleTable"
+    <div data-dojo-attach-point="layerTable" data-dojo-type="jimu/dijit/SimpleTable"
          data-dojo-props='fields:[
              {name:"layer",title:"${nls.layerName}","class":"label",type:"empty",width:"100px"},
              {name:"label",title:"${nls.layerLabel}","class":"label",type:"empty", width:"80px"},
@@ -15,23 +15,18 @@
              {name:"actions",title:"${nls.actions}","class":"actions actions2",type:"actions",actions:["up","down","delete"],width:"45px"}]'>
     </div>
   </div>
-  <div>
-    <div class="instruction">
-      <span class="instruction-inner">${nls.mainPanelText}</span>
-    </div>
-    <input type="text" name="mainPanelText"
-           placeholder="${nls.mainPanelTextPlaceholder}"
-           data-dojo-type="dijit/form/TextBox"
-           data-dojo-props="trim:true"
-           data-dojo-attach-point="mainPanelText"
-           style="width:100%">
-    <div class="instruction">
-      <span class="instruction-inner">${nls.mainPanelIcon}</span>
-    </div>
+  <div class="label" style="padding-top:25px;font-weight: bold;">
+    ${nls.optionsText}
+  </div>
+  <hr />
+  <div style="padding-top:20px;">
     <div class="mainPanelPreviewContainer">
       <div data-dojo-attach-point="mainPanelPreviewButton" class="mainPanelPreviewButton">
         <div data-dojo-attach-event="onclick:uploadImage" class="jimu-btn">
           ${nls.uploadImage}
+        </div>
+        <div class="instruction2">
+          <span>${nls.mainPanelText}</span>
         </div>
       </div>
       <div data-dojo-attach-point="mainPanelPreview" class="bg rounded mainPanelPreview">
@@ -43,30 +38,43 @@
                   <div data-dojo-attach-point="panelMainIcon" />
                 </div>
               </div>
-              <div class="pageTitle" data-dojo-attach-point="pageTitle"></div>
-              <div id="pageCloseMain" class="pageClose" data-dojo-attach-point="pageCloseMain"></div>
             </div>
-            <div class="pageBody">
-              <div id="pageMain" class="resultsContent" data-dojo-attach-point="pageMain"></div>
-            </div>
+            <input type="text" name="mainPanelText"
+                   placeholder="${nls.mainPanelTextPlaceholder}"
+                   data-dojo-type="dijit/form/TextBox"
+                   data-dojo-props="trim:true"
+                   data-dojo-attach-point="mainPanelText"
+                   style="width:100%">
           </div>
         </div>
       </div>
     </div>
-
-    <input type="file" accept="image/png, image/jpeg, image/bmp, image/gif" data-dojo-attach-point="fileInput" style="opacity:0; width:0px; height:0px;">
+    <input type="file" 
+           accept="image/png, image/jpeg, image/bmp, image/gif" 
+           data-dojo-attach-point="fileInput" 
+           style="opacity:0; width:0px; height:0px;">
   </div>
-  <div style="float:left; width:100%; padding:10px 10px 10px 10px">
-    <div data-dojo-type="jimu/dijit/CheckBox"
-         data-dojo-attach-point="cbxRefreshEnabled"
-         data-dojo-props='label:"${nls.refreshEnabled}"'
-         class="" style="float:left; width:160px;">
+  <div style="width:380px; height:100px; border: 5px dashed gray; float:right;" class="refreshOff" data-dojo-attach-point="refreshOptions">
+    <div style="float:left; padding-left:5px; padding-top: 5px; padding-bottom: 13px;">
+      <span >${nls.refreshIntervalInstruction}</span>
+      <input type="text" name="refreshInterval"
+             placeholder="${nls.refreshInterval}"
+             data-dojo-type="dijit/form/ValidationTextBox"
+             data-dojo-props="regExp:'[\\d]+', invalidMessage:'${nls.invalidInterval}',trim:true"
+             data-dojo-attach-point="refreshInterval"
+             style="width:240px; padding-left: 10px;">
     </div>
-    <input type="text" name="refreshInterval"
-           placeholder="${nls.refreshInterval}"
-           data-dojo-type="dijit/form/ValidationTextBox"
-           data-dojo-props="regExp:'[\\d]+', invalidMessage:'${nls.invalidInterval}',trim:true"
-           data-dojo-attach-point="refreshInterval"
-           style="float:left; width:350px;">
+    <div>
+      <div style="float:left; padding-left:40px;">
+        <div data-dojo-attach-event="onclick:downloadRefreshConfig" class="jimu-btn" style="padding-left: 10px;">
+          ${nls.downloadRefreshConfig}
+        </div>
+      </div>
+      <div style="float:left; padding-left:20px;">
+        <div data-dojo-attach-event="onclick:downloadRefreshScript" class="jimu-btn" style="padding-left:20px;">
+          ${nls.downloadRefreshScript}
+        </div>
+      </div>
+    </div>
   </div>
 </div>

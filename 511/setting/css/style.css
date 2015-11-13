@@ -114,6 +114,14 @@
     align-content:flex-end;
 }
 
+.jimu-widget-511-setting .instruction2{
+	 padding-top: 100px;
+}
+
+.jimu-widget-511-setting .instruction2 span{
+	color: #596679;
+}
+
 .jimu-widget-511-setting .instruction{
 	 padding-top: 20px;
 }
@@ -445,9 +453,24 @@ margin-left:100px;
 
 .mainPanelPreviewContainer {
   width:400px; 
-  height:220px; 
+  height:250px; 
   border: 5px dashed gray; 
   float:left;
+}
+
+.refreshOptionsContainer {
+  width:200px; 
+  height:200px; 
+  border: 5px dashed gray; 
+  float:left;
+}
+
+.refreshOff {
+  display:none;
+}
+
+.refreshOn {
+  display:block;
 }
 
 .mainPanelText {
@@ -476,10 +499,10 @@ margin-left:100px;
   width:350px;
 }
 
-.override-geocode-service-chooser-content {
+.override-feature-service-chooser-content {
 	width: 580px !important;
 	min-height: 150px !important;
 }
-.override-geocode-service-chooser-content .service-browser-container{
+.override-feature-service-chooser-content .service-browser-container{
 	display: none;
 }
