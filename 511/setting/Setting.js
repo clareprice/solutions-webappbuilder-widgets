@@ -151,20 +151,6 @@ define([
       setConfig: function (config) {
         this.config = config;
         
-        //this.cbxRefreshEnabled.onChange = lang.hitch(this, function (val) {
-        //  this.refreshInterval.disabled = !val;
-        //  this.refreshInterval.readOnly = !val;
-        //});
-
-        //if (typeof (this.config.refreshEnabled) !== 'undefined') {
-        //  this.cbxRefreshEnabled.checked = this.config.refreshEnabled;
-        //}
-
-        //if (!this.cbxRefreshEnabled.checked) {
-        //  this.refreshInterval.disabled = true;
-        //  this.refreshInterval.readOnly = true;
-        //}
-
         if (this.config.mainPanelText) {
           this.mainPanelText.set('value', this.config.mainPanelText);
         }
@@ -298,6 +284,9 @@ define([
         refreshCheckBox.placeAt(td);
         refreshCheckBox.startup();
         tr.refreshBox = refreshCheckBox;
+
+        //TODO disable for StreamLayer
+
       },
 
       _addFilterOption: function (tr) {
@@ -427,7 +416,7 @@ define([
           height: 485,
           content: filter,
           buttons: [{
-            label: this.nls.filterPopupOk,
+            label: this.nls.popupOk,
             onClick: lang.hitch(this, function () {
               var partsObj = filter.toJson();
               if (partsObj && partsObj.expr) {
@@ -442,7 +431,7 @@ define([
               }
             })
           }, {
-            label: this.nls.filterPopupCancel
+            label: this.nls.popupCancel
           }]
         });
 
@@ -477,63 +466,6 @@ define([
             });
           }
         }));
-      },
-
-      _getOpLayerByID: function(id){
-        for (var i = 0; i < this.opLayers._layerinfos.length; i++) {
-          var l = this.opLayers._layerinfos[i];
-          if (l.id === id) {
-            return l;
-          }
-        }
-        return null;
-      },
-
-      _getLayerInfoByID: function (layer, layerinfos) {
-        layerinfos.reverse();
-        var label = this.getOperationalLayerTitle(layer);
-        for (var i = 0; i < layerinfos.length; i++) {
-          var li = layerinfos[i];
-          if (li.id === layer.id) {
-            return li;
-          }
-        }
-
-        var newLayerInfo = {
-          label: label,
-          value: label,
-          layer: layer.lyrObj,
-          use: false,
-          imageData: null,
-          type: layer.type,
-          url: layer.url,
-          id: layer.id
-        };
-        return newLayerInfo;
-      },
-
-      getOperationalLayerTitle: function (layer) {
-        var title = "";
-        if (this.appConfig.map && this.appConfig.map.operationallayers) {
-          var len = this.appConfig.map.operationallayers.length;
-          for (var i = 0; i < len; i++) {
-            if (this.appConfig.map.operationallayers[i].url.toLowerCase() ===
-              layer.url.toLowerCase()) {
-              title = this.appConfig.map.operationallayers[i].label;
-              break;
-            }
-          }
-        }
-        if (!title) {
-          title = layer.name;
-        }
-        if (!title) {
-          title = layer.label;
-        }
-        if (!title) {
-          title = layer.id;
-        }
-        return title;
       },
 
       _editIcon: function (tr) {
@@ -611,9 +543,7 @@ define([
           };
 
           var td = query('.thumb2', tr)[0];
-          if (typeof (td) !== 'undefined') {
-            lInfo.imageData = td.innerHTML;
-          }
+          lInfo.imageData = typeof (td) !== 'undefined' ? td.innerHTML : "<div></div>";
 
           table.push(lInfo);
         }));
@@ -631,14 +561,8 @@ define([
       },
 
       destroy: function () {
-        this._destroyPopupDialog();
-
-        this.inherited(arguments);
-      },
-
-      _destroyPopupDialog: function () {
         dijitPopup.close();
+        this.inherited(arguments);
       }
-
     });
   });

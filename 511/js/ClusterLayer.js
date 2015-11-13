@@ -49,6 +49,7 @@ define([
       this.clusterSize = options.clusterSize || 120;
       this.colorStr = options.color || '#ff0000';
       this.color = Color.fromString(this.colorStr);
+      this.filter = options.filter;
       /////////////////////////
       this._singles = []; // populated when a graphic is clicked
       //this._showSingles = options.hasOwnProperty("showSingles") ? options.showSingles : true;
@@ -157,7 +158,7 @@ define([
       if (url.length > 0) {
         this.initalCount(url);
         var q = new Query();
-        q.where = "1=1";
+        q.where = typeof(this.filter) !== 'undefined' ? this.filter.expr : "1=1";
         q.returnGeometry = false;
         this.queryPending = true;
         var qt = new QueryTask(url);

@@ -92,7 +92,7 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
       this._features = options.features;
       this._lyrType = options.layerType;
       this.p = options.parent;
-
+      this.filter = options.filter;
       //derived from options
       this._url = this._lyrInfo.url;
       this._renderer = this._parentLayerObject.renderer;
@@ -189,6 +189,7 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
 
     loadDataFromFeatureCollection: function () {
       //load inital data fromFeatureCollection layer in the map
+      //TODO need to be able to filter at this level also
       this.mapLayer.clear();
       var sr = this._map.spatialReference;
       for (var i = 0; i < this._features.length; i++) {
@@ -237,7 +238,7 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
         //get a quick inital count while the graphics are being retrieved
         this.initalCount(url);
         var q = new Query();
-        q.where = "1=1";
+        q.where = typeof (this.filter) !== 'undefined' ? this.filter.expr : "1=1";
         q.returnGeometry = false;
         this.queryPending = true;
         var qt = new QueryTask(url);

@@ -292,7 +292,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             this._updateLayerList(l, lyrInfo, "Feature Layer");
             break;
           }
-        }else if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISStreamLayer") {
+        } else if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISStreamLayer") {
           if (layer.layerObject && layer.id === lyrInfo.id) {
             this._updateLayerList(layer, lyrInfo, "Feature Layer");
             break;
@@ -504,7 +504,18 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       var clusterLayer = null;
       var potentialNewID = lyrInfo.id + this.UNIQUE_APPEND_VAL_CL;
       if (this.map.graphicsLayerIds.indexOf(potentialNewID) > -1) {
+        //TODO...need to requery if the filter has changed 
         clusterLayer = this.map.getLayer(potentialNewID);
+
+        var lyrInfoHasFilter = typeof (lyrInfo.filter) !== 'undefined' ? true : false;
+        if (typeof (clusterLayer.filter) !== 'undefined' && lyrInfoHasFilter) {
+          if (clusterLayer.filter.expr !== lyrInfo.filter.expr) {
+            clusterLayer.filter = lyrInfo.filter;
+            clusterLayer.loadData(clusterLayer.url);
+          }
+        }
+
+        clusterLayer.refresh = lyrInfo.refresh;
 
         //TODO only really need to do this if it has changed
         var n = domConstruct.toDom(lyrInfo.imageData);
@@ -525,7 +536,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           url: lyrInfo.url,
           refreshInterval: this.config.refreshInterval,
           refreshEnabled: this.config.refreshEnabled,
-          mapServiceResults: results
+          mapServiceResults: results,
+          filter: lyrInfo.filter,
+          refresh: lyrInfo.refresh
         };
         domConstruct.destroy(n.id);
         clusterLayer = new ClusterLayer(options);
@@ -538,6 +551,16 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       var potentialNewID = lyrInfo.id + this.UNIQUE_APPEND_VAL_FC;
       if (potentialNewID in Object.keys(this.layerList)) {
         dataLoader = this.layerList[potentialNewID].dataLoader;
+
+        var lyrInfoHasFilter = typeof (lyrInfo.filter) !== 'undefined' ? true : false;
+        if (typeof (dataLoader.filter) !== 'undefined' && lyrInfoHasFilter) {
+          if (dataLoader.filter.expr !== lyrInfo.filter.expr) {
+            dataLoader.filter = lyrInfo.filter;
+            dataLoader.loadData(dataLoader.url);
+          }
+        }
+
+        dataLoader.refresh = lyrInfo.refresh;
       } else {
         //TODO...still deciding if the optional features option will stay
         // could just go to URL for all inital loading
@@ -553,13 +576,17 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           refreshEnabled: this.config.refreshEnabled,
           layerType: lyrType,
           mapServiceResults: results,
-          parent: this.w
+          parent: this.w,
+          filter: lyrInfo.filter,
+          refresh: lyrInfo.refresh
         });
       }
       return dataLoader;
     },
 
     _getStreamLayer: function (lyrInfo, lyr, lyrType) {
+      //TODO how would QueryFilter work with these??
+
       //pretty much the same as FC but we don't add a new layer instance
       // symbology would be different
 
@@ -568,6 +595,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       var dataLoader = null;
       var potentialNewID = lyrInfo.id;
       if (potentialNewID in Object.keys(this.layerList)) {
+        //TODO need to figure out what QueryFilters mean for these
         dataLoader = this.layerList[potentialNewID].dataLoader;
       } else {
         //TODO...still deciding if the optional features option will stay
@@ -579,7 +607,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           name: lyrInfo.label,
           node: dom.byId("recNum_" + potentialNewID),
           layerInfo: lyrInfo,
-          layerType: lyrType
+          layerType: lyrType,
+          filter: lyrInfo.filter
         });
       }
       return dataLoader;
