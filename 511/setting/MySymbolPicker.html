@@ -1,0 +1,62 @@
+﻿<div style="height:100%;width:100%;overflow:auto;padding-bottom:8px">
+
+  <!--Symbol Options-->
+  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
+    <div data-dojo-attach-point="div_rdoLayerSym" style="height:30px;">
+      <input data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoLayerSym" data-dojo-attach-event="onChange:_rdoLayerSymChanged" title="${nls.rdoLayerTitle}" />
+      <span class="label">${nls.rdoLayer}</span>  
+      <div style="width:30px; height:30px; float:right;" data-dojo-attach-point="layerSym"> </div> 
+    </div>
+  </div>
+
+  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
+    <div data-dojo-attach-point="div_rdoEsriSym" style="height:30px;">
+      <input data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoEsriSym" data-dojo-attach-event="onChange:_rdoEsriSymChanged" title="${nls.rdoEsriTitle}" />
+      <span class="label">${nls.rdoEsri}</span>
+      <div data-dojo-attach-point="symbolPicker" data-dojo-type="jimu/dijit/SymbolPicker" style="float:right; overflow:visible"></div>
+    </div>
+  </div>
+
+  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
+    <div data-dojo-attach-point="div_rdoCustomSym" style="vertical-align:middle">
+      <input data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoCustomSym" data-dojo-attach-event="onChange:_rdoCustomSymChanged" title="${nls.rdoCustomTitle}" />
+      <span class="label">${nls.rdoCustom}</span>
+      <div data-dojo-attach-point="customSymbolPlaceholder" class="customPlaceholder"></div>
+      <div data-dojo-attach-point="uploadCustomSymbol" class="uploadCustom"></div>     
+    </div>
+  </div>
+
+  <!--Clustering Options-->
+  <hr/>
+  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpClusterOptions">
+    <div data-dojo-attach-point="div_chkCluster">
+      <input data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="chkClusterSym" title="${nls.chkClusterTitle}" data-dojo-attach-event="onChange:_chkClusterChanged"/>
+      <span class="label">${nls.chkCluster}</span>
+    </div>
+  </div>
+  <div class="jimu-r-row" data-dojo-attach-point="grpSymbolOptions" style="padding-top:16px; padding-left:10px;">
+    <div data-dojo-attach-point="div_rdoLayerSym">
+      <input data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="chkFillSym" title="${nls.defineFillSymbol}" data-dojo-attach-event="onChange:_chkFillChanged"/>
+      <span class="label">${nls.defineFillSymbol}</span>
+      <div data-dojo-attach-point="fillPicker" data-dojo-type="jimu/dijit/ColorPicker" style="width:25px;height:25px; float:right;"></div>
+    </div>
+  </div>
+  <div class="jimu-r-row" data-dojo-attach-point="grpSymbolOptions" style="padding-top:8px; padding-left:10px;">
+    <div data-dojo-attach-point="div_rdoCustomSym" style="vertical-align:middle">
+      <input data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="chkHaloSym" title="${nls.defineHaloSymbol}" data-dojo-attach-event="onChange:_chkHaloChanged"/>
+      <span class="label">${nls.defineHaloSymbol}</span>
+      <div data-dojo-attach-point="haloPicker" data-dojo-type="jimu/dijit/ColorPicker" style="width:25px;height:25px; float:right;"></div>
+    </div>
+  </div>
+
+  <!--Footer-->
+  <div class="footer" style="padding-top:20px;">
+    <div class="jimu-btn ok" data-dojo-attach-point="btnOk">${nls.popupOk}</div>
+    <div class="jimu-btn cancel" data-dojo-attach-point="btnCancel">${nls.popupCancel}</div>
+  </div>
+
+  <input type="file"
+         accept="image/png, image/jpeg, image/bmp, image/gif"
+         data-dojo-attach-point="fileInput"
+         style="opacity:0; width:0px; height:0px;">
+</div>

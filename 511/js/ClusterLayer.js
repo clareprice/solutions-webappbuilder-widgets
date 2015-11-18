@@ -32,8 +32,9 @@ define([
    'esri/symbols/SimpleLineSymbol',
    'esri/request',
    'esri/tasks/query',
-   'esri/tasks/QueryTask'
-], function (declare, array, dojoEvent, lang, Color, on, DeferredList, GraphicsLayer, Graphic, SpatialReference, Extent, Point, PictureMarkerSymbol, SimpleMarkerSymbol, SimpleLineSymbol, esriRequest, Query, QueryTask) {
+   'esri/tasks/QueryTask',
+   'esri/symbols/jsonUtils',
+], function (declare, array, dojoEvent, lang, Color, on, DeferredList, GraphicsLayer, Graphic, SpatialReference, Extent, Point, PictureMarkerSymbol, SimpleMarkerSymbol, SimpleLineSymbol, esriRequest, Query, QueryTask, jsonUtils) {
   var clusterLayer = declare('ClusterLayer', [GraphicsLayer], {
 
     cancelRequest: false,
@@ -50,12 +51,21 @@ define([
       this.colorStr = options.color || '#ff0000';
       this.color = Color.fromString(this.colorStr);
       this.filter = options.filter;
+      this.symbolData = options.symbolData;
+
+      this._setupSymbols();
+
       /////////////////////////
       this._singles = []; // populated when a graphic is clicked
       //this._showSingles = options.hasOwnProperty("showSingles") ? options.showSingles : true;
       this._showSingles = true;
       var symColor = this.color.toRgb();
       var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+
+      //if (typeof (this.symbolData) !== 'undefined') {
+      //  //TODO would want to set to a defined smaller size
+      //  this._singleSym = this.symbolData.symbol;
+      //}
       this._singleSym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
       //this._singleTemplate = options.singleTemplate || new PopupTemplate({ "title": "", "description": "{*}" });
       this._maxSingles = options.maxSingles || 1000;
@@ -458,25 +468,39 @@ define([
             var data = clusterGraphic.graphics;
             var size = 40 + parseInt(count / 40);
             var size2 = size - (size / 4);
-            var symColor = this.color.toRgb();
-            var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-            var csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
-            var psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
-            var psym2 = new PictureMarkerSymbol(this.icon, size2 - 13, size2 - 13);
-            var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-            var csym2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size2, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+
+            this._setSymbols(size, size2);
 
             var attr = {
               Count: count,
               Data: data
             };
             if (count > 1) {
-              this.add(new Graphic(clusterGraphic.center, csym, attr));
-              this.add(new Graphic(clusterGraphic.center, psym, attr));
+              if (typeof (this.symbolData) !== 'undefined') {
+                if (this.symbolData.symbolType !== 'CustomSymbol') {
+                  this.add(new Graphic(clusterGraphic.center, this.csym, attr));
+                  this.add(new Graphic(clusterGraphic.center, this.csym3, attr));
+                } else {
+                  this.add(new Graphic(clusterGraphic.center, this.csym, attr));
+                  this.add(new Graphic(clusterGraphic.center, this.psym, attr));
+                }
+              } else {
+                this.add(new Graphic(clusterGraphic.center, this.csym, attr));
+                this.add(new Graphic(clusterGraphic.center, this.psym, attr));
+              }
             } else {
               var pt = clusterGraphic.graphics[0].geometry;
-              this.add(new Graphic(pt, csym2, attr));
-              this.add(new Graphic(pt, psym2, attr));
+              if (typeof (this.symbolData) !== 'undefined') {
+                if (this.symbolData.symbolType !== 'CustomSymbol') {
+                  this.add(new Graphic(pt, this.csym2, attr));
+                } else {
+                  this.add(new Graphic(pt, this.csym2, attr));
+                  this.add(new Graphic(pt, this.psym2, attr));
+                }
+              } else {
+                this.add(new Graphic(pt, this.csym2, attr));
+                this.add(new Graphic(pt, this.psym2, attr));
+              }
             }
           }
         }
@@ -486,6 +510,71 @@ define([
         }
       }
     },
+
+    _setSymbols: function (size, size2, withHalo, withFill) {
+      var symColor = this.color.toRgb();
+      if (typeof (this.symbolData) !== 'undefined') {
+        //options for cluster with more than 1
+        var cls;
+        if (this.haloColor) {
+          cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, Color.fromString(this.haloColor), 2);
+        } else {
+          cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+        }
+
+        if (this.fillColor) {
+          var c = Color.fromString(this.fillColor);
+          this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([c.r, c.g, c.b, 0.5]));
+        } else {
+          this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([0, 0, 0, 0]));
+        }
+
+        this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
+
+        //options for cluster with 1
+        this.csym2 = jsonUtils.fromJson(this.mainSymbol);
+        this.csym3 = lang.clone(this.csym2);
+        if (typeof (this.csym2.xoffset) !== 'undefined') {
+          this.csym3.xoffset = 0;
+        }
+        if (typeof (this.csym2.yoffset) !== 'undefined') {
+          this.csym3.yoffset = 0;
+        }
+      } else {
+        //options for cluster with more than 1
+        var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+        this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+        this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
+
+        //options for cluster with 1
+        this.psym2 = new PictureMarkerSymbol(this.icon, size2 - 13, size2 - 13);
+        var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+        this.csym2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size2, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+      }
+    },
+
+    _setupSymbols: function () {
+      if (typeof (this.symbolData) !== 'undefined') {
+        this.mainSymbol = this.symbolData.symbol;
+        if (typeof (this.symbolData.clusterOptions.fillColor) !== 'undefined') {
+          this.fillColor = this.symbolData.clusterOptions.fillColor;
+        }
+        if (typeof (this.symbolData.clusterOptions.haloColor) !== 'undefined') {
+          this.haloColor = this.symbolData.clusterOptions.haloColor;
+        }
+      }
+    },
+
+    //SymbolsORG: function(){
+    //  var symColor = this.color.toRgb();
+    //  var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+    //  var csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+    //  var psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
+    //  var psym2 = new PictureMarkerSymbol(this.icon, size2 - 13, size2 - 13);
+    //  var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
+    //  var csym2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size2, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+
+    //},
 
     getClusterCenter: function (graphics) {
       var xSum = 0;

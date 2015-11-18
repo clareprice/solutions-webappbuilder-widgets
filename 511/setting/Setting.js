@@ -35,17 +35,20 @@ define([
     'jimu/dijit/Popup',
     'jimu/dijit/_FeaturelayerServiceChooserContent',
     'esri/request',
+    'esri/symbols/jsonUtils',
     'dijit/TooltipDialog',
     'dijit/popup',
     'dojo/_base/lang',
     'dojo/on',
+    'dojox/gfx',
     'dojo/dom-class',
     'dojo/Deferred',
     'dojo/dom-style',
     'dojo/query',
     'dojo/_base/html',
     'dojo/_base/array',
-    'dojo/sniff'
+    'dojo/sniff',
+    './MySymbolPicker'
 ],
   function (
     registry,
@@ -68,17 +71,20 @@ define([
     Popup,
     _FeaturelayerServiceChooserContent,
     esriRequest,
+    jsonUtils,
     TooltipDialog,
     dijitPopup,
     lang,
     on,
+    gfx,
     domClass,
     Deferred,
     domStyle,
     query,
     html,
     array,
-    has
+    has,
+    SymbolPicker
     ) {
     return declare([BaseWidgetSetting, _WidgetsInTemplateMixin], {
       baseClass: 'jimu-widget-511-setting',
@@ -89,11 +95,14 @@ define([
       refreshLayersCount: 0,
       refreshLayers: [],
 
+      // 1) Emit an event when a key property, that will require a widget update, changes
+
       postCreate: function () {
         this.inherited(arguments);
         this._getAllLayers();
         this.own(on(this.btnAddLayer, 'click', lang.hitch(this, this._addLayerRow)));
-        this.own(on(this.layerTable, 'actions-edit', lang.hitch(this, this._editIcon)));
+        //this.own(on(this.layerTable, 'actions-edit', lang.hitch(this, this._editIcon)));
+        this.own(on(this.layerTable, 'actions-edit', lang.hitch(this, this._pickSymbol)));
       },
 
       startup: function () {
@@ -123,17 +132,16 @@ define([
               this._recurseOpLayers(OpLyr.layers, options);
             }
           } else {
-            //options.unshift({
-            //  label: OpLyr.title,
-            //  value: OpLyr.title,
-            //  url: OpLyr.layerObject.url,
-            //  use: OpLyr.use,
-            //  imageData: OpLyr.imageData,
-            //  id: OpLyr.id,
-            //  type: OpLyr.type,
-            //  lyrObj: Node.layerObject
-            //});
-            options.push({
+
+            var sym;
+            if (typeof (OpLyr.layerObject.renderer) !== 'undefined') {
+              var renderer = OpLyr.layerObject.renderer;
+              if (typeof (renderer.symbol) !== 'undefined') {
+                sym = OpLyr.layerObject.renderer.symbol;
+              }
+            }
+
+            options.unshift({
               label: OpLyr.title,
               value: OpLyr.title,
               url: OpLyr.layerObject.url,
@@ -141,7 +149,7 @@ define([
               imageData: OpLyr.imageData,
               id: OpLyr.id,
               type: OpLyr.type,
-              lyrObj: Node.layerObject
+              symbol: sym
             });
           }
         }
@@ -193,7 +201,7 @@ define([
           tr.refreshBox.set("checked", lyrInfo.refresh);
           
           var a = domConstruct.create("div", {
-            class: "thumb2",
+            class: "imageDataGFX",
             innerHTML: [lyrInfo.imageData],
             title: this.nls.iconColumnText
           }, tr.cells[3]);
@@ -201,6 +209,7 @@ define([
           var cLo = this._getLayerOptionByValue(lyrInfo.layer);
           cLo.filter = lyrInfo.filter;
           cLo.imageData = lyrInfo.imageData;
+          cLo.symbolData = lyrInfo.symbolData;
         }
       },
 
@@ -263,7 +272,7 @@ define([
                 }
               } else {
                 this.activeLayerInfo = lyrInfo;
-                this._onSetLocatorUrlClick();
+                this._onSetUrlClick();
               }
             } else {
               var i = this.refreshLayers.indexOf(value);
@@ -301,7 +310,7 @@ define([
         }, tr));
       },
 
-      _onSetLocatorUrlClick: function () {
+      _onSetUrlClick: function () {
         this.serviceChooserContent = new _FeaturelayerServiceChooserContent({
           url: ""
         });
@@ -468,28 +477,69 @@ define([
         }));
       },
 
-      _editIcon: function (tr) {
-        var reader = new FileReader();
-        reader.onload = lang.hitch(this, function () {
-          tr.cells[3].innerHTML = "<div></div>";
+      _pickSymbol: function (tr) {
+        var selectLayersValue = tr.selectLayers.value;
+        var lo = this._getLayerOptionByValue(selectLayersValue);
+        this.curRow = tr;
 
-          var a = domConstruct.create("div", {
-            class: "thumb2",
-            innerHTML: ['<img class="thumb2" src="', reader.result, '"/>'].join(''),
-            title: this.nls.iconColumnText
-          }, tr.cells[3]);
+        var options = {
+          nls: this.nls,
+          callerRow: tr,
+          layerInfo: lo,
+          value: selectLayersValue,
+          symbolInfo: typeof(this.curRow.symbolData) !== 'undefined' ?this.curRow.symbolData : lo.symbolData
+        };
+        var sourceDijit = new SymbolPicker(options);
 
-          var r = this.layerTable.editRow(tr, {
-            imageData: a.innerHTML
+        var popup = new Popup({
+          width: 290,
+          autoHeight: true,
+          content: sourceDijit,
+          titleLabel: this.nls.sympolPopupTitle
+        });
+
+        this.own(on(sourceDijit, 'ok', lang.hitch(this, function (data) {
+          this.curRow.cells[3].innerHTML = "<div></div>";
+          this.curRow.symbolData = data;
+
+          var newDiv = this._createImageDataDiv(data.symbol);
+          var r = this.layerTable.editRow(this.curRow, {
+            imageData: newDiv.innerHTML
           });
-        });
 
-        this.fileInput.onchange = lang.hitch(this, function () {
-          var f = this.fileInput.files[0];
-          reader.readAsDataURL(f);
-        });
+          this.curRow = null;
+          sourceDijit.destroy();
+          sourceDijit = null;
+          popup.close();
+        })));
 
-        this.fileInput.click();
+        this.own(on(sourceDijit, 'cancel', lang.hitch(this, function () {
+          this.curRow = null;
+          sourceDijit.destroy();
+          sourceDijit = null;
+          popup.close();
+        })));
+      },
+
+      _createImageDataDiv: function (sym) {
+        var symbol = jsonUtils.fromJson(sym);
+
+        if (typeof(symbol.setWidth) !== 'undefined') {
+          symbol.setWidth(27);
+          symbol.setHeight(27);
+        } else {
+          if (symbol.size > 20) {
+            symbol.setSize(20);
+          }
+        }
+        var a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
+        var mySurface = gfx.createSurface(a, 28, 28);
+        var descriptors = jsonUtils.getShapeDescriptors(symbol);
+        var shape = mySurface.createShape(descriptors.defaultShape)
+                      .setFill(descriptors.fill)
+                      .setStroke(descriptors.stroke);
+        shape.applyTransform({ dx: 14, dy: 14 });
+        return a;
       },
 
       uploadImage: function () {
@@ -539,12 +589,12 @@ define([
             filter: lo.filter,
             url: lo.url,
             type: lo.type,
-            id: lo.id
+            id: lo.id,
+            symbolData: tr.symbolData
           };
 
-          var td = query('.thumb2', tr)[0];
+          var td = query('.imageDataGFX', tr)[0];
           lInfo.imageData = typeof (td) !== 'undefined' ? td.innerHTML : "<div></div>";
-
           table.push(lInfo);
         }));
 

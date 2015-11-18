@@ -49,7 +49,28 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     // 14) point layers need to draw on top
     // 15) need to handle layer re-order on widget-change...panel is good...map is not
     // 16) Need to update point symbols for graphic if the config settings have changed for the icon
-
+    // 17) after save and re-open the settings are not persisted correctly
+    // 18) Get user configured symbol into the graphic symbol
+    // 19) Sanitize calls
+    // 20) jsLint
+    // 21) Mobile css changes
+    // 22) Need to handle re-configure...if symbol, order or whatever changes then the widget needs to be refreshed
+    //     should not need to re-query the data but would need to remove layers no longer used and update things like the symbol 
+    // 23)
+    // 24)
+    // 25)
+    // 26)
+    // 27)
+    // 28)
+    // 29)
+    // 30)
+    // 31)
+    // 32)
+    // 33)
+    // 34)
+    // 35)
+    // 36)
+    // 37)
 
     name: "511",
     opLayers: null,
@@ -90,7 +111,6 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       this.widgetChange = false;
 
       ////helps turn on/off layers when the widget is opened and closed
-      ////when initialized LayerVisibilityManager will turn off all opLayers
       this.layerVisibilityManager = new LayerVisibilityManager({
         map: this.map,
         configLayerList: this.layerList,
@@ -191,7 +211,13 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         LayerInfos.getInstance(this.map, this.map.itemInfo)
           .then(lang.hitch(this, function (operLayerInfos) {
             this.opLayers = operLayerInfos._operLayers;
-            this.opLayerInfos = operLayerInfos._layerinfos;
+
+            //workaround change in jimu
+            if (parseFloat(this.appConfig.wabVersion) < 1.4) {
+              this.opLayerInfos = operLayerInfos._layerinfos;
+            } else {
+              this.opLayerInfos = operLayerInfos._layerInfos;
+            }
 
             var queries = [];
             for (var i = 0; i < this.configLayerInfos.length; i++) {
@@ -250,6 +276,34 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       this.addMapLayers();
     },
 
+    _createLayerListItem: function (lyrInfo) {
+      for (var ii = 0; ii < this.opLayers.length; ii++) {
+        var layer = this.opLayers[ii];
+        var layerGeomType = "";
+        if (layer.layerType === "ArcGISMapServiceLayer") {
+          var l = this._getSubLayerByURL(lyrInfo.id);
+          if (typeof (l) !== 'undefined') {
+            this._updateLayerList(l, lyrInfo, "Feature Layer");
+            break;
+          }
+        } else if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISStreamLayer") {
+          if (layer.layerObject && layer.id === lyrInfo.id) {
+            this._updateLayerList(layer, lyrInfo, "Feature Layer");
+            break;
+          } else if (layer.featureCollection) {
+            for (var iii = 0; iii < layer.featureCollection.layers.length; iii++) {
+              var lyr = layer.featureCollection.layers[iii];
+              if (layer.id === lyrInfo.id) {
+                this._updateLayerList(lyr, lyrInfo, "Feature Collection");
+                break;
+              }
+            }
+          }
+        }
+      }
+    },
+
+
     removeMapLayer: function (id) {
       //check if the widget was previously configured 
       // with a layer that it no longer consumes...if so remove it
@@ -280,33 +334,6 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         }));
       }
       reorderLayers = null;
-    },
-
-    _createLayerListItem: function (lyrInfo) {
-      for (var ii = 0; ii < this.opLayers.length; ii++) {
-        var layer = this.opLayers[ii];
-        var layerGeomType = "";
-        if (layer.layerType === "ArcGISMapServiceLayer") {
-          var l = this._getSubLayerByURL(lyrInfo.id);
-          if (typeof (l) !== 'undefined') {
-            this._updateLayerList(l, lyrInfo, "Feature Layer");
-            break;
-          }
-        } else if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISStreamLayer") {
-          if (layer.layerObject && layer.id === lyrInfo.id) {
-            this._updateLayerList(layer, lyrInfo, "Feature Layer");
-            break;
-          } else if (layer.featureCollection) {
-            for (var iii = 0; iii < layer.featureCollection.layers.length; iii++) {
-              var lyr = layer.featureCollection.layers[iii];
-              if (layer.id === lyrInfo.id) {
-                this._updateLayerList(lyr, lyrInfo, "Feature Collection");
-                break;
-              }
-            }
-          }
-        }
-      }
     },
 
     _getSubLayerByURL: function (id) {
@@ -538,7 +565,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           refreshEnabled: this.config.refreshEnabled,
           mapServiceResults: results,
           filter: lyrInfo.filter,
-          refresh: lyrInfo.refresh
+          refresh: lyrInfo.refresh,
+          symbolData: lyrInfo.symbolData
         };
         domConstruct.destroy(n.id);
         clusterLayer = new ClusterLayer(options);
@@ -578,7 +606,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           mapServiceResults: results,
           parent: this.w,
           filter: lyrInfo.filter,
-          refresh: lyrInfo.refresh
+          refresh: lyrInfo.refresh,
+          symbolData: lyrInfo.symbolData
         });
       }
       return dataLoader;
@@ -608,7 +637,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           node: dom.byId("recNum_" + potentialNewID),
           layerInfo: lyrInfo,
           layerType: lyrType,
-          filter: lyrInfo.filter
+          filter: lyrInfo.filter,
+          symbolData: lyrInfo.symbolData
         });
       }
       return dataLoader;

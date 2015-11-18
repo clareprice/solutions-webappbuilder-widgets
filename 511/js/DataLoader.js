@@ -56,6 +56,7 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
     _lyrType: "",
     name: "",
     _node: null,
+    symbolData: null,
 
     mapClickSignal: null,
     extentChangeSignal: null,
@@ -97,6 +98,7 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
       this._url = this._lyrInfo.url;
       this._renderer = this._parentLayerObject.renderer;
       this._geometryType = this._parentLayerObject.geometryType;
+      this.symbolData = options.symbolData;
 
       if (this._renderer) {
         if (typeof (this._renderer.attributeField) !== "undefined") {

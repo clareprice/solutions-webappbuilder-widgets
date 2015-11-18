@@ -506,3 +506,41 @@ margin-left:100px;
 .override-feature-service-chooser-content .service-browser-container{
 	display: none;
 }
+
+.uploadCustom {
+  width: 25px; 
+  height: 25px; 
+  float: right; 
+  cursor: pointer; 
+  background-image: url(../css/images/edit_default.png);
+  background-repeat: no-repeat;
+}
+
+.uploadCustom:hover {
+  width: 25px; 
+  height: 25px; 
+  float: right; 
+  cursor: pointer; 
+  background-image: url(../css/images/edit_hover.png);
+  background-repeat: no-repeat;
+}
+
+.customPlaceholder {
+  width: 25px; 
+  height: 25px; 
+  float: right; 
+  cursor: pointer; 
+}
+
+.colorPickerOn {
+  display:inline-block;
+}
+
+.colorPickerOff {
+  display: none;
+}
+
+.imageDataGFX {
+  width:30px;
+  height:30px;
+}
