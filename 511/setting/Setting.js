@@ -96,12 +96,15 @@ define([
       refreshLayers: [],
 
       // 1) Emit an event when a key property, that will require a widget update, changes
+      // 2) Add cluster SVG behind the icon in the settings table
+      // 3) Finish the remove of the second download script button
+      // 4) Label should reset or clear on selection changed for the drop down
+    
 
       postCreate: function () {
         this.inherited(arguments);
         this._getAllLayers();
         this.own(on(this.btnAddLayer, 'click', lang.hitch(this, this._addLayerRow)));
-        //this.own(on(this.layerTable, 'actions-edit', lang.hitch(this, this._editIcon)));
         this.own(on(this.layerTable, 'actions-edit', lang.hitch(this, this._pickSymbol)));
       },
 
@@ -133,13 +136,8 @@ define([
             }
           } else {
 
-            var sym;
-            if (typeof (OpLyr.layerObject.renderer) !== 'undefined') {
-              var renderer = OpLyr.layerObject.renderer;
-              if (typeof (renderer.symbol) !== 'undefined') {
-                sym = OpLyr.layerObject.renderer.symbol;
-              }
-            }
+            //TODO determine and pass in geom type here
+
 
             options.unshift({
               label: OpLyr.title,
@@ -149,7 +147,7 @@ define([
               imageData: OpLyr.imageData,
               id: OpLyr.id,
               type: OpLyr.type,
-              symbol: sym
+              renderer: OpLyr.layerObject.renderer
             });
           }
         }
@@ -487,7 +485,7 @@ define([
           callerRow: tr,
           layerInfo: lo,
           value: selectLayersValue,
-          symbolInfo: typeof(this.curRow.symbolData) !== 'undefined' ?this.curRow.symbolData : lo.symbolData
+          symbolInfo: typeof(this.curRow.symbolData) !== 'undefined' ? this.curRow.symbolData : lo.symbolData
         };
         var sourceDijit = new SymbolPicker(options);
 

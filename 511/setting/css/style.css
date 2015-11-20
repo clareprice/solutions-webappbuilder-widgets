@@ -508,39 +508,61 @@ margin-left:100px;
 }
 
 .uploadCustom {
+  display: block;
   width: 25px; 
-  height: 25px; 
-  float: right; 
+  height: 25px;
+  float: left;
   cursor: pointer; 
   background-image: url(../css/images/edit_default.png);
   background-repeat: no-repeat;
+  padding-bottom:10px;
+  margin-left: 10px;
 }
 
 .uploadCustom:hover {
+  display: block;
   width: 25px; 
   height: 25px; 
-  float: right; 
+  float: left;
   cursor: pointer; 
   background-image: url(../css/images/edit_hover.png);
   background-repeat: no-repeat;
+  padding-bottom:10px;
+  margin-left: 10px;
 }
 
 .customPlaceholder {
+  display: block;
   width: 25px; 
   height: 25px; 
-  float: right; 
+  float: left; 
   cursor: pointer; 
-}
-
-.colorPickerOn {
-  display:inline-block;
-}
-
-.colorPickerOff {
-  display: none;
+  padding-bottom:10px;
 }
 
 .imageDataGFX {
+  /*margin-left:10px;*/
   width:30px;
   height:30px;
+}
+
+.imageDataGFX2 {
+  /*width:15px;
+  height:15px;*/
+  display: block;
+  float:left;
+}
+
+.imageDataGFXMulti {
+  width:100%;
+  /*margin-left:10px;*/
+}
+
+.symPickers{
+  float:right; 
+  overflow:visible;
+}
+
+.symPick {
+  padding-left: 10px;
 }

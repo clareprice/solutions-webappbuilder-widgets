@@ -56,7 +56,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     // 21) Mobile css changes
     // 22) Need to handle re-configure...if symbol, order or whatever changes then the widget needs to be refreshed
     //     should not need to re-query the data but would need to remove layers no longer used and update things like the symbol 
-    // 23)
+    // 23) Need to add support for clusterEnabled === false
     // 24)
     // 25)
     // 26)
@@ -386,10 +386,16 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
     getLayer: function (lyr, lyrInfo, lyrType, geomType, results) {
       var l = null;
+
+      //TODO...update this to deal with cluster not-enabled
+      // will basically just create feature collection layer for points also
+
       if (geomType === "esriGeometryPoint") {
         if (lyr.layerType === "ArcGISFeatureLayer" || results) {
 
           //TODO...this part feels sloppy
+          //TODO...look to see what all info could be captured as a part of settings
+          //less work we have to do here the better
           var infoTemplate = undefined;
           if (lyr.originOperLayer) {
             if (lyr.originOperLayer.parentLayerInfo.controlPopupInfo.infoTemplates) {

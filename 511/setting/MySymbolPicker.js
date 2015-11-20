@@ -61,19 +61,21 @@ define(['dojo/_base/declare',
       nls: null,
       row: null,
       layerInfo: null,
-      _fillColor: '',
-      _haloColor:'',
       clusteringEnabled: null,
       symbolInfo: null,
       symbolType: "",
-      fillColor: null,
-      haloColor: null,
+
+      // 1) Retain state is jacked up again after the layer symbol changes and the switch from halo/fill color define to fill symbol define
+      // 2) Show all symbols when more than one is associated with the renderer..thinking I'll have all symbol things draw below the radio buttons..that way we have the full width and plenty of height o work with
+      // 3) Needs to use a loading shelter or whatever...I think that will prevent the flicker while it initally draws
+      // 4) 
+      // 
 
       constructor: function ( /*Object*/ options) {
         this.nls = options.nls;
         this.row = options.tr;
         this.layerInfo = options.layerInfo;
-        this.symbol = options.layerInfo.symbol;
+        this.renderer = options.layerInfo.renderer;
         this.geometryType = options.layerInfo.geometryType;
         this.symbolInfo = options.symbolInfo;
       },
@@ -82,12 +84,14 @@ define(['dojo/_base/declare',
         this.inherited(arguments);
         this._loadLayerSymbol();
         this._initSymbolPicker();
+        this._initClusterSymbolPicker();
         this._addEventHandlers();
         this._initUI();
       },
 
       _initUI: function () {
         if (typeof (this.symbolInfo) !== 'undefined') {
+          //set retained symbol properties
           switch (this.symbolInfo.symbolType) {
             case 'LayerSymbol':
               this.rdoLayerSym.set('checked', true);
@@ -104,41 +108,28 @@ define(['dojo/_base/declare',
               this.rdoCustomSym.set('checked', true);
               this._rdoEsriSymChanged(false);
               this._rdoLayerSymChanged(false);
-              this._createImageDataDiv(this.symbolInfo.symbol);
+              this._createImageDataDiv(this.symbolInfo.symbol, true);
               break;
           }
 
+          //set cluster options properties
           this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);
-
-          //set fill props
-          this.fillColor = this.symbolInfo.clusterOptions.fillColor;
-          var fillDefined = typeof (this.fillColor) !== 'undefined';
-          this.chkFillSym.set('checked', fillDefined);
-          if(!fillDefined) {
-            this._chkFillChanged(false);
+          if (typeof (this.symbolInfo.clusterSymbol) !== 'undefined') {
+            this.clusterPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.clusterSymbol));
           }
-          this.fillPicker.setColor(new Color(this.fillColor));
-
-          //set halo props
-          this.haloColor = this.symbolInfo.clusterOptions.haloColor;
-          var haloDefined = typeof (this.haloColor) !== 'undefined';
-          this.chkHaloSym.set('checked', haloDefined);
-          if (!haloDefined) {
-            this._chkHaloChanged(false);
-          }
-          this.haloPicker.setColor(new Color(this.haloColor));
         } else {
+          //default state
           this.rdoLayerSym.set('checked', true);
           this._rdoEsriSymChanged(false);
           this._rdoCustomSymChanged(false);
           this.chkClusterSym.set('checked', true);
-          this._chkFillChanged(false);
-          this._chkHaloChanged(false);
+          this.rdoLayerIcon.set('checked', true);
+          this._rdoCustomIconChanged(false);
         }
       },
 
-      _createImageDataDiv: function (sym) {
-        var symbol = jsonUtils.fromJson(sym);
+      _createImageDataDiv: function (sym, convert) {
+        var symbol = convert ? jsonUtils.fromJson(sym) : sym;
 
         if (typeof (symbol.setWidth) !== 'undefined') {
           symbol.setWidth(25);
@@ -160,7 +151,11 @@ define(['dojo/_base/declare',
 
       _addEventHandlers: function(){
         this.own(on(this.uploadCustomSymbol, 'click', lang.hitch(this, function (event) {
-          this._editIcon(this.tr);
+          this._editIcon(this.tr, "Symbol");
+        })));
+
+        this.own(on(this.uploadCustomIcon, 'click', lang.hitch(this, function (event) {
+          this._editIcon(this.tr, "Icon");
         })));
 
         this.own(on(this.btnOk, 'click', lang.hitch(this, function () {
@@ -197,28 +192,33 @@ define(['dojo/_base/declare',
             break;
         }
 
-        if (this.clusteringEnabled) {
-          if (this.chkFillSym.checked) {
-            this.fillColor = this.fillPicker.getColor().toHex();
+        var icon;
+        if (this.iconType === "LayerIcon") {
+          icon = symbol;
+        } else {
+          if (this.customIconPlaceholder.children.length > 0) {
+            if (typeof (this.customIconPlaceholder.children[0].src) !== 'undefined') {
+              icon = new PictureMarkerSymbol(this.customIconPlaceholder.children[0].src, 13, 13);
+            } else {
+              icon = jsonUtils.fromJson(this.symbolInfo.icon);
+            }
           } else {
-            this.fillColor = undefined;
-          }
-          if (this.chkHaloSym.checked) {
-            this.haloColor = this.haloPicker.getColor().toHex();
-          } else {
-            this.haloColor = undefined;
+            //TODO show error message here that they need to pick a symbol...or don't care...still deciding
           }
         }
 
-        //set symbolInfo based on popup config
+        if (this.clusteringEnabled) {
+          this.clusterSymbol = this.clusterPicker.getSymbol().toJson();
+        }else{
+          this.clusterSymbol = undefined;
+        }
+
         this.symbolInfo = {
           symbolType: this.symbolType,
           symbol: symbol.toJson(),
+          clusterSymbol: this.clusterSymbol,
           clusteringEnabled: this.clusteringEnabled,
-          clusterOptions: {
-            fillColor: this.fillColor,
-            haloColor: this.haloColor
-          }
+          icon: icon
         };
       },
 
@@ -246,57 +246,119 @@ define(['dojo/_base/declare',
 
       _chkClusterChanged: function (v) {
         this.clusteringEnabled = v;
-        this.chkFillSym.set('disabled', !v);
-        this.chkHaloSym.set('disabled', !v);
+        html.setStyle(this.grpClusterOptions, 'display', v ? "block" : "none");
       },
 
-      _chkFillChanged: function (v) {
-        html.setStyle(this.fillPicker.domNode, "display", v ? "inline-block" : "none");
+      _rdoLayerIconChanged: function (v) {
+        if (v) {
+          this.iconType = "LayerIcon";
+        }
+        html.setStyle(this.layerIcon, 'display', v ? "block" : "none");
       },
 
-      _chkHaloChanged: function (v) {
-        html.setStyle(this.haloPicker.domNode, "display", v ? "inline-block" : "none");
+      _rdoCustomIconChanged: function (v) {
+        if (v) {
+          this.iconType = "CustomIcon";
+        }
+        html.setStyle(this.uploadCustomIcon, 'display', v ? "block" : "none");
+        html.setStyle(this.customIconPlaceholder, 'display', v ? "block" : "none");
       },
 
       _initSymbolPicker: function(){
-        var geoType = 'point';//jimuUtils.getTypeByGeometryType(layerInfo.geometryType);
-        var symType = '';
-        if (geoType === 'point') {
-          symType = 'marker';
-        }
-        else if (geoType === 'polyline') {
-          symType = 'line';
-        }
-        else if (geoType === 'polygon') {
-          symType = 'fill';
-        }
-        if (symType) {
-          this.symbolPicker.showByType(symType);
-        }
+        //var geoType = 'point';//jimuUtils.getTypeByGeometryType(layerInfo.geometryType);
+        //var symType = '';
+        //if (geoType === 'point') {
+        //  symType = 'marker';
+        //}
+        //else if (geoType === 'polyline') {
+        //  symType = 'line';
+        //}
+        //else if (geoType === 'polygon') {
+        //  symType = 'fill';
+        //}
+        //if (symType) {
+        //  this.symbolPicker.showByType(symType);
+        //}
+        this.symbolPicker.showByType('marker');
+      },
+
+      _initClusterSymbolPicker: function () {
+        this.clusterPicker.showByType('fill');        
       },
 
       _loadLayerSymbol: function () {
-        //Not all symbol types return a url...not even sure this is gaurenteed for point symbols
-        // may be ok though...if this is expoected to be there for point symbols
-        //Would not make sense to define for other geom types but we still do need a icon for the panel
-        
-        //TODO...maybe I can do the symbol to svg thing here and be pretty safe
-        // would still have the issue with non-single symbol rendering
-        this.layerSym.innerHTML = ['<img style="width:30px; height:30px;" src="', this.symbol.url, '"/>'].join('');
+        if (typeof (this.renderer) !== 'undefined') {
+          var renderer = this.renderer;
+          if (typeof (renderer.symbol) !== 'undefined') {
+            this.symbol = this.renderer.symbol;
+            this.layerSym.innerHTML = this._createImageDataDiv(this.symbol, false).innerHTML;
+          } else if (typeof (this.renderer.infos) !== 'undefined') {
+            //TODO should handle this differently...and show all..then make the user define the core symbol that would draw with the
+            //cluster graphic and in the panel
+
+            //this.symbol = this.renderer.infos[0].symbol;
+
+            this.layerSym.innerHTML = this._createCombinedImageDataDiv().innerHTML;
+          }
+        }
+
+        //This will just show the first symbol for the list...duplicating above while testing
+        //this.layerSym.innerHTML = this._createImageDataDiv(this.symbol, false).innerHTML;
+
+        //This will show all of the symbols from the renderer...would still need so way to let the user define the main icon
+
       },
 
-      _editIcon: function (tr) {
+      _createCombinedImageDataDiv: function () {
+
+        var a = domConstruct.create("div", { class: "imageDataGFXMulti" }, this.customSymbolPlaceholder);
+
+        var infos = this.renderer.infos;
+        for (var i = 0; i < infos.length; i++) {
+          var symbol = infos[i].symbol;
+          var b = domConstruct.create("div", { class: "imageDataGFX imageDataGFX2" }, a);
+          if (typeof (symbol.setWidth) !== 'undefined') {
+            symbol.setWidth(25);
+            symbol.setHeight(25);
+          } else {
+            if (symbol.size > 20) {
+              symbol.setSize(20);
+            }
+          }
+
+          var mySurface = gfx.createSurface(b, 26, 26);
+          var descriptors = jsonUtils.getShapeDescriptors(symbol);
+          var shape = mySurface.createShape(descriptors.defaultShape)
+                        .setFill(descriptors.fill)
+                        .setStroke(descriptors.stroke);
+          shape.applyTransform({ dx: 13, dy: 13 });
+          a.insertBefore(b, a.firstChild);
+          a.appendChild(b);
+        }
+        return a;
+      },
+
+      _editIcon: function (tr, type) {
         var reader = new FileReader();
         reader.onload = lang.hitch(this, function () {
-          this.customSymbolPlaceholder.innerHTML = "<div></div>";
+          var node;
+          var title;
+          if(type === "Symbol"){
+            node = this.customSymbolPlaceholder;
+            title = this.nls.editCustomSymbol;
+          }else{
+            node = this.customIconPlaceholder;
+            title = this.nls.editCustomIcon;
+          }
+          node.innerHTML = "<div></div>";
 
           var a = domConstruct.create("div", {
             class: "customPlaceholder",
             innerHTML: ['<img class="customPlaceholder" src="', reader.result, '"/>'].join(''),
-            title: "Edit Custom Symbol"
+            title: title
           });
 
-          this.customSymbolPlaceholder.innerHTML = a.innerHTML;
+          node.innerHTML = a.innerHTML;
         });
 
         this.fileInput.onchange = lang.hitch(this, function () {

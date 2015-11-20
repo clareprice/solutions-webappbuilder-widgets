@@ -511,24 +511,24 @@ define([
       }
     },
 
-    _setSymbols: function (size, size2, withHalo, withFill) {
+    _setSymbols: function (size, size2) {
       var symColor = this.color.toRgb();
       if (typeof (this.symbolData) !== 'undefined') {
-        //options for cluster with more than 1
-        var cls;
-        if (this.haloColor) {
-          cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, Color.fromString(this.haloColor), 2);
-        } else {
-          cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-        }
 
-        if (this.fillColor) {
-          var c = Color.fromString(this.fillColor);
-          this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([c.r, c.g, c.b, 0.5]));
+        //need to make a marker from the fill properties
+        var fsp = jsonUtils.fromJson(this.backgroundClusterSymbol);
+        var style;
+        var lineWidth;
+        if (fsp.outline.color.a === 0) {
+          style = SimpleLineSymbol.STYLE_NULL;
+          lineWidth = 0;
         } else {
-          this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([0, 0, 0, 0]));
+          style = SimpleLineSymbol.STYLE_SOLID;
+          lineWidth = fsp.outline.width;
         }
+        var cls = SimpleLineSymbol(style, fsp.outline.color, lineWidth);
 
+        this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, fsp.color);
         this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
 
         //options for cluster with 1
@@ -556,12 +556,7 @@ define([
     _setupSymbols: function () {
       if (typeof (this.symbolData) !== 'undefined') {
         this.mainSymbol = this.symbolData.symbol;
-        if (typeof (this.symbolData.clusterOptions.fillColor) !== 'undefined') {
-          this.fillColor = this.symbolData.clusterOptions.fillColor;
-        }
-        if (typeof (this.symbolData.clusterOptions.haloColor) !== 'undefined') {
-          this.haloColor = this.symbolData.clusterOptions.haloColor;
-        }
+        this.backgroundClusterSymbol = this.symbolData.clusterSymbol;
       }
     },
 
