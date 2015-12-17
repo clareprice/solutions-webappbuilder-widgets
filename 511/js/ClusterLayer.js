@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// Copyright © 2015 Esri. All Rights Reserved.
+// Copyright ï¿½ 2015 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -262,7 +262,7 @@ define([
             this._addSingles(singles);
             this._map.infoWindow.setFeatures(attr.Data);
           } else {
-            this._map.infoWindow.setFeatures([g]);     
+            this._map.infoWindow.setFeatures([g]);
           }
         }
       }
@@ -285,8 +285,9 @@ define([
       }
     },
 
-    refreshFeatures: function () {
+    reloadData: function () {
       if (this.url) {
+        this._setupSymbols();
         this.loadData(this.url);
       }
     },

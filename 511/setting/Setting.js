@@ -94,12 +94,14 @@ define([
       layer_options: [],
       refreshLayersCount: 0,
       refreshLayers: [],
+      hasUpdatedInfo: false,
 
       // 1) Emit an event when a key property, that will require a widget update, changes
+      // not sure if event or otherwise is best...basically I think I just need to know if the filter
+      // or if the symbolData changes...if not I think the logic as is will just work
       // 2) Add cluster SVG behind the icon in the settings table
       // 3) Finish the remove of the second download script button
-      // 4) Label should reset or clear on selection changed for the drop down
-    
+      // 4) Label should reset or clear on selection changed for the drop down?
 
       postCreate: function () {
         this.inherited(arguments);
@@ -125,8 +127,8 @@ define([
 
       _setLayers: function () {
         var options = [];
-        for (var i = 0; i < this.opLayers._layerinfos.length; i++) {
-          var OpLyr = this.opLayers._layerinfos[i];
+        for (var i = 0; i < this.opLayers._layerInfos.length; i++) {
+          var OpLyr = this.opLayers._layerInfos[i];
 
           if (OpLyr.newSubLayers.length > 0) {
             this._recurseOpLayers(OpLyr.newSubLayers, options);
@@ -135,10 +137,12 @@ define([
               this._recurseOpLayers(OpLyr.layers, options);
             }
           } else {
-
             //TODO determine and pass in geom type here
-
-
+            // should I also do the layer type and any of the other type work that is needed
+            // by the widget here so that can all be done up front
+            // in addition to that...should I also just fire off the queries to the datasources at this time??
+            //  if we did that then we could basically just pass the layer instances to the widget...update the props as they change 
+            //  and further minimize the delay we see on panel load...need to think through this further
             options.unshift({
               label: OpLyr.title,
               value: OpLyr.title,
@@ -156,7 +160,7 @@ define([
 
       setConfig: function (config) {
         this.config = config;
-        
+
         if (this.config.mainPanelText) {
           this.mainPanelText.set('value', this.config.mainPanelText);
         }
@@ -170,6 +174,7 @@ define([
 
         this.layerTable.clear();
         for (var i = 0; i < this.config.layerInfos.length; i++) {
+          
           var lyrInfo = this.config.layerInfos[i];
           this._populateLayerRow(lyrInfo);
         }
@@ -197,7 +202,7 @@ define([
           tr.selectLayers.set("value", lyrInfo.layer);
           tr.labelText.set("value", lyrInfo.label);
           tr.refreshBox.set("checked", lyrInfo.refresh);
-          
+
           var a = domConstruct.create("div", {
             class: "imageDataGFX",
             innerHTML: [lyrInfo.imageData],
@@ -226,6 +231,10 @@ define([
           tabLayers.placeAt(td);
           tabLayers.startup();
           tr.selectLayers = tabLayers;
+          this.own(on(tabLayers, 'change', lang.hitch(this, function (v) {
+            //TODO...could keep track of value change
+            // TODO...could also clear the label box here...still thinking if that is appropriate
+          })));
         }
       },
 
@@ -251,8 +260,8 @@ define([
           //  "padding-left": "10px"
           //},
           onChange: lang.hitch(this, function (v) {
-            //TODO has to be a better way to do this 
-            // just need to know the row the hosts the cbx so we can get the layer value and 
+            //TODO has to be a better way to do this
+            // just need to know the row the hosts the cbx so we can get the layer value and
             //The other thought would be to do the type check while first adding the row
             //Then here we'd just need to check if this row has a url...if not then do the popup
             //that may be better....
@@ -485,12 +494,13 @@ define([
           callerRow: tr,
           layerInfo: lo,
           value: selectLayersValue,
-          symbolInfo: typeof(this.curRow.symbolData) !== 'undefined' ? this.curRow.symbolData : lo.symbolData
+          symbolInfo: typeof(this.curRow.symbolData) !== 'undefined' ? this.curRow.symbolData : lo.symbolData,
+          map: this.map
         };
         var sourceDijit = new SymbolPicker(options);
 
         var popup = new Popup({
-          width: 290,
+          width: 625,
           autoHeight: true,
           content: sourceDijit,
           titleLabel: this.nls.sympolPopupTitle
@@ -500,7 +510,7 @@ define([
           this.curRow.cells[3].innerHTML = "<div></div>";
           this.curRow.symbolData = data;
 
-          var newDiv = this._createImageDataDiv(data.symbol);
+          var newDiv = this._createImageDataDiv(data.icon);
           var r = this.layerTable.editRow(this.curRow, {
             imageData: newDiv.innerHTML
           });
@@ -521,22 +531,29 @@ define([
 
       _createImageDataDiv: function (sym) {
         var symbol = jsonUtils.fromJson(sym);
+        var a;
 
-        if (typeof(symbol.setWidth) !== 'undefined') {
-          symbol.setWidth(27);
-          symbol.setHeight(27);
-        } else {
-          if (symbol.size > 20) {
-            symbol.setSize(20);
+        if (symbol) {
+          if (typeof (symbol.setWidth) !== 'undefined') {
+            symbol.setWidth(27);
+            symbol.setHeight(27);
+          } else {
+            if (symbol.size > 20) {
+              symbol.setSize(20);
+            }
           }
+
+          a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
+          var mySurface = gfx.createSurface(a, 28, 28);
+          var descriptors = jsonUtils.getShapeDescriptors(symbol);
+          var shape = mySurface.createShape(descriptors.defaultShape)
+                        .setFill(descriptors.fill)
+                        .setStroke(descriptors.stroke);
+          shape.applyTransform({ dx: 14, dy: 14 });
+        } else if (typeof(sym.url) !== 'undefined') {
+          a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
+          domStyle.set(a, "background-image", "url(" + sym.url + ")");
         }
-        var a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
-        var mySurface = gfx.createSurface(a, 28, 28);
-        var descriptors = jsonUtils.getShapeDescriptors(symbol);
-        var shape = mySurface.createShape(descriptors.defaultShape)
-                      .setFill(descriptors.fill)
-                      .setStroke(descriptors.stroke);
-        shape.applyTransform({ dx: 14, dy: 14 });
         return a;
       },
 
@@ -573,7 +590,7 @@ define([
         var rows = this.layerTable.getRows();
         var table = [];
         var lInfo;
-        array.forEach(rows, lang.hitch(this, function (tr) {        
+        array.forEach(rows, lang.hitch(this, function (tr) {
           var selectLayersValue = tr.selectLayers.value;
 
           var labelText = tr.labelText;

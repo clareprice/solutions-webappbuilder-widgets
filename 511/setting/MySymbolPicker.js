@@ -26,6 +26,7 @@ define(['dojo/_base/declare',
     'dojo/_base/Color',
     'dojo/query',
     'esri/symbols/jsonUtils',
+    'esri/request',
     'jimu/dijit/SymbolPicker',
     'jimu/BaseWidget',
     'jimu/dijit/Message',
@@ -48,6 +49,7 @@ define(['dojo/_base/declare',
     Color,
     query,
     jsonUtils,
+    esriRequest,
     SymbolPicker1,
     BaseWidget,
     Message,
@@ -64,12 +66,16 @@ define(['dojo/_base/declare',
       clusteringEnabled: null,
       symbolInfo: null,
       symbolType: "",
+      map: null,
 
       // 1) Retain state is jacked up again after the layer symbol changes and the switch from halo/fill color define to fill symbol define
       // 2) Show all symbols when more than one is associated with the renderer..thinking I'll have all symbol things draw below the radio buttons..that way we have the full width and plenty of height o work with
       // 3) Needs to use a loading shelter or whatever...I think that will prevent the flicker while it initally draws
-      // 4) 
-      // 
+      // 4) Need to set the SVG size relative to the size of the image...no biggie it seems with a symbol that is esentially square...but if the symbol is elongated on the y or the x
+      //    then it looks kind of smushed or stretched 
+      // 5) Get the Symbol picker moved below its rdo button
+      // 6) Need a way to define the symbol size for custom symbol
+      // 7) Icon is what needs to go to the other dialog
 
       constructor: function ( /*Object*/ options) {
         this.nls = options.nls;
@@ -78,6 +84,7 @@ define(['dojo/_base/declare',
         this.renderer = options.layerInfo.renderer;
         this.geometryType = options.layerInfo.geometryType;
         this.symbolInfo = options.symbolInfo;
+        this.map = options.map;
       },
 
       postCreate: function () {
@@ -112,6 +119,24 @@ define(['dojo/_base/declare',
               break;
           }
 
+          switch (this.symbolInfo.clusterType) {
+            case 'ThemeCluster':
+              this.rdoThemeCluster.set('checked', true);
+              break;
+            case 'CustomCluster':
+              this.rdoCustomCluster.set('checked', true)
+              break;
+          }
+
+          switch (this.symbolInfo.iconType) {
+            case 'LayerIcon':
+              this.rdoLayerIcon.set('checked', true);
+              break;
+            case 'CustomIcon':
+              this.rdoCustomIcon.set('checked', true)
+              break;
+          }
+
           //set cluster options properties
           this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);
           if (typeof (this.symbolInfo.clusterSymbol) !== 'undefined') {
@@ -123,9 +148,54 @@ define(['dojo/_base/declare',
           this._rdoEsriSymChanged(false);
           this._rdoCustomSymChanged(false);
           this.chkClusterSym.set('checked', true);
+          this.rdoCustomCluster.set('checked', true);
           this.rdoLayerIcon.set('checked', true);
           this._rdoCustomIconChanged(false);
         }
+
+        this._createIconPreviewDiv();
+        this._createSymbolPreviewDiv();
+      },
+
+      _createSymbolPreviewDiv: function(){
+
+      },
+
+      _createIconPreviewDiv: function(){
+        var m = this.map;
+
+        //TODO think about this...I am kind of leaning towards
+        //just using the light-gray canvas by default...otherwise I could get the image
+        //from the default basemap
+        if(typeof(m._layers["defaultBasemap"]) !== 'undefined'){
+          //var url = "http://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer";
+          var url = m._layers["defaultBasemap"]._url.path;
+        }
+//TODO get extent from the map object
+
+        var _url = "http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Specialty/ESRI_StateCityHighway_USA/MapServer";
+
+        //esriConfig.defaults.io.corsEnabledServers.push("sampleserver1.arcgisonline.com");
+
+        esriRequest({
+          url: _url + "/export",
+          content: {
+            f: "json",
+            format: "png",
+            bbox: "-115.8,30.4,-85.5,50.5"
+          },
+          handleAs: "json",
+          load: lang.hitch(this, this.loadFunc),
+          error: lang.hitch(this, this.errorFunc)
+        }, { usePost: false });
+      },
+
+      loadFunc: function(image){
+        domStyle.set(this.symbolPreview, "background-image", "url(" + image.href + ")");
+      },
+
+      errorFunc: function(error) {
+        console.log("Error: ", error.message);
       },
 
       _createImageDataDiv: function (sym, convert) {
@@ -169,7 +239,7 @@ define(['dojo/_base/declare',
       },
 
       _setSymbol: function () {
-        //regardless of type we need to get and store in a common way 
+        //regardless of type we need to get and store in a common way
         var symbol;
         switch (this.symbolType) {
           case 'LayerSymbol':
@@ -180,6 +250,7 @@ define(['dojo/_base/declare',
             symbol = this.symbolPicker.getSymbol();
             break;
           case 'CustomSymbol':
+
             if (this.customSymbolPlaceholder.children.length > 0) {
               if (typeof (this.customSymbolPlaceholder.children[0].src) !== 'undefined') {
                 symbol = new PictureMarkerSymbol(this.customSymbolPlaceholder.children[0].src, 13, 13);
@@ -208,7 +279,11 @@ define(['dojo/_base/declare',
         }
 
         if (this.clusteringEnabled) {
-          this.clusterSymbol = this.clusterPicker.getSymbol().toJson();
+          if (this.clusterType === "ThemeCluster") {
+            this.clusterSymbol = "custom";
+          } else {
+            this.clusterSymbol = this.clusterPicker.getSymbol().toJson();
+          }
         }else{
           this.clusterSymbol = undefined;
         }
@@ -218,7 +293,9 @@ define(['dojo/_base/declare',
           symbol: symbol.toJson(),
           clusterSymbol: this.clusterSymbol,
           clusteringEnabled: this.clusteringEnabled,
-          icon: icon
+          icon: icon,
+          clusterType: this.clusterType,
+          iconType: this.iconType
         };
       },
 
@@ -249,9 +326,23 @@ define(['dojo/_base/declare',
         html.setStyle(this.grpClusterOptions, 'display', v ? "block" : "none");
       },
 
+      _rdoThemeClusterChanged:function(v){
+        if (v) {
+          this.clusterType = "ThemeCluster";
+        }
+      },
+
+      _rdoCustomClusterChanged:function(v){
+        if (v) {
+          this.clusterType = "CustomCluster";
+          //TODO hide the cluster symbol picker
+        }
+      },
+
       _rdoLayerIconChanged: function (v) {
         if (v) {
           this.iconType = "LayerIcon";
+          //TODO hide the upload icon tool
         }
         html.setStyle(this.layerIcon, 'display', v ? "block" : "none");
       },
@@ -283,7 +374,7 @@ define(['dojo/_base/declare',
       },
 
       _initClusterSymbolPicker: function () {
-        this.clusterPicker.showByType('fill');        
+        this.clusterPicker.showByType('fill');
       },
 
       _loadLayerSymbol: function () {

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// Copyright © 2015 Esri. All Rights Reserved.
+// Copyright ï¿½ 2015 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 define(['jimu/BaseWidget', 'jimu/LayerInfos/LayerInfoFactory', 'jimu/LayerInfos/LayerInfos', 'jimu/utils',
     'dojo/dom', 'dojo/dom-class', 'dojo/dom-construct', 'dojo/on', 'dojo/dom-style', 'dojo/_base/declare', 'dojo/_base/xhr', 'dojo/_base/Color', 'dojo/_base/lang', 'dojo/_base/html', 'dojo/promise/all', 'dojo/topic', 'dojo/_base/array', 'dojo/DeferredList',
-    'dijit/_WidgetsInTemplateMixin', "dijit/registry",   
+    'dijit/_WidgetsInTemplateMixin', "dijit/registry",
     'esri/dijit/PopupTemplate', 'esri/graphic', 'esri/request', 'esri/geometry/Point', 'esri/layers/FeatureLayer', 'esri/tasks/query', 'esri/tasks/QueryTask', 'esri/dijit/Legend',
     './js/ClusterLayer', './js/DataLoader', './js/ThemeColorManager', './js/LayerVisibilityManager'
 ],
@@ -38,9 +38,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     // 3) Add show legend - done-ish (if we want it more compact then it would require some time....this is just using the JS API dijit for legend and you can only choose between arrange left or right)
     // 4) Add menu
     // 5) Test Stream Layer...looks good...need to figure out how to get the count - done
-    // 6) Fix issues with theme manager - done
     // 7) Support query on the layer?...main thing to deal with would be to add another edit button...with simple-table we could add only one...the next would need to be custom...I have worked through this before to support a custom row delete...the one part that I didn;t finish on that one was to show/hide the image based on hover
-    // 8) Mark if layer should be refreshed or static in Settings
     // 9) Cleanup layers that have been removed on re-configure
     // 10) Need a final destroy method at the right point to clean up added layers
     // 11) Accept URL for FC layers...do a popup if they click the checkbox I will add for "refreshLayer"
@@ -55,8 +53,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     // 20) jsLint
     // 21) Mobile css changes
     // 22) Need to handle re-configure...if symbol, order or whatever changes then the widget needs to be refreshed
-    //     should not need to re-query the data but would need to remove layers no longer used and update things like the symbol 
-    // 23) Need to add support for clusterEnabled === false
+    //     should not need to re-query the data but would need to remove layers no longer used and update things like the symbol
+    // 23) Need to add support for clusterEnabled === false and need to handle if clusterEnabled changes...would delete the layer and readd for the new type
     // 24)
     // 25)
     // 26)
@@ -201,6 +199,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       for (var key in this.layerList) {
         var lyr = this.layerList[key];
         if (lyr.type === "ClusterLayer" || lyr.type === "FeatureCollectionLayer") {
+          alert("check if this should be switched to reloadData now that I have changed the func in clusterLayer");
           lyr.layerObject.refreshFeatures();
         }
       }
@@ -214,7 +213,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
             //workaround change in jimu
             if (parseFloat(this.appConfig.wabVersion) < 1.4) {
-              this.opLayerInfos = operLayerInfos._layerinfos;
+              this.opLayerInfos = operLayerInfos._layerInfos;
             } else {
               this.opLayerInfos = operLayerInfos._layerInfos;
             }
@@ -226,7 +225,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               if (lyrInfo.url.indexOf("MapServer")) {
                 queries.push(esriRequest({ "url": lyrInfo.url + "?f=json" }));
                 this.queryLookupList.push({ "url": lyrInfo.url, "geomType": "" });
-              }            
+              }
             }
 
             if (queries.length > 0) {
@@ -303,9 +302,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }
     },
 
-
     removeMapLayer: function (id) {
-      //check if the widget was previously configured 
+      //check if the widget was previously configured
       // with a layer that it no longer consumes...if so remove it
       var potentialNewClusterID = id + this.UNIQUE_APPEND_VAL_CL;
       var potentialNewFCID = id + this.UNIQUE_APPEND_VAL_FC;
@@ -364,7 +362,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }
     },
 
-    _updateLayerList: function (lyr, lyrInfo, lyrType) {      
+    _updateLayerList: function (lyr, lyrInfo, lyrType) {
       var geomType = lyr.layerObject.geometryType;
       if(typeof(geomType) === 'undefined'){
         if (this.queryLookupList) {
@@ -483,6 +481,10 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     _addLegend: function (layer) {
+      //TODO replace this with convert to SVG code
+      // Think I'll write a dijit that outputs a collection tables...with the desc or whatever it's called and the SVG graphic
+      // this way I'll have complete control on the layout...but also more code to manage
+
       var component = registry.byId("legend_" + layer.id);
       if (component) {
         component.destroyRecursive();
@@ -537,23 +539,37 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       var clusterLayer = null;
       var potentialNewID = lyrInfo.id + this.UNIQUE_APPEND_VAL_CL;
       if (this.map.graphicsLayerIds.indexOf(potentialNewID) > -1) {
-        //TODO...need to requery if the filter has changed 
         clusterLayer = this.map.getLayer(potentialNewID);
 
-        var lyrInfoHasFilter = typeof (lyrInfo.filter) !== 'undefined' ? true : false;
-        if (typeof (clusterLayer.filter) !== 'undefined' && lyrInfoHasFilter) {
-          if (clusterLayer.filter.expr !== lyrInfo.filter.expr) {
-            clusterLayer.filter = lyrInfo.filter;
-            clusterLayer.loadData(clusterLayer.url);
-          }
+        var reloadData = false;
+
+        //update the filter if it has changed
+        if (JSON.stringify(clusterLayer.filter) !== JSON.stringify(lyrInfo.filter)) {
+          clusterLayer.filter = lyrInfo.filter;
+          reloadData = true;
         }
 
-        clusterLayer.refresh = lyrInfo.refresh;
+        //update the symbol if it has changed
+        if (JSON.stringify(clusterLayer.symbolData) !== JSON.stringify(lyrInfo.symbolData)) {
+          clusterLayer.symbolData = lyrInfo.symbolData;
+          reloadData = true;
+        }
 
-        //TODO only really need to do this if it has changed
+        //update the icon if it has changed
         var n = domConstruct.toDom(lyrInfo.imageData);
-        clusterLayer.icon = n.src;
+        if (JSON.stringify(clusterLayer.icon) !== JSON.stringify(n.src)) {        
+          clusterLayer.icon = n.src;      
+        }
         domConstruct.destroy(n.id);
+
+        if (clusterLayer.refresh !== lyrInfo.refresh) {
+          clusterLayer.refresh = lyrInfo.refresh;
+          reloadData = true;
+        }
+
+        if (reloadData) {
+          clusterLayer.reloadData(clusterLayer.url);
+        }
       } else {
         var features = [];
         var hasFeatures = (lyrType === "Feature Collection") ? true : false;
@@ -715,12 +731,12 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             domClass.remove("legend_" + obj.id, "legendOn");
             domClass.add("legend_" + obj.id, "legendOff");
           }
-        } 
+        }
       }
     },
 
     _showMenu: function (obj) {
-      //show right click menu here 
+      //show right click menu here
       alert("_showMenu");
     },
 

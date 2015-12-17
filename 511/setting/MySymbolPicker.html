@@ -1,78 +1,111 @@
 ﻿<div style="height:100%;width:100%;overflow:auto;padding-bottom:8px">
+    <div data-dojo-attach-point="div_symbolOptionsContainer"
+         style="float:left; min-width:200px;">
+        <div class="label" style="padding-top:25px;font-weight: bold;">
+            ${nls.symbolOptionsText}
+        </div>
+        <hr />
+        <div data-dojo-attach-point="div_symbolOptions">
+            <!--Symbol Options-->
+            <div class="jimu-r-row"
+            style="padding-top:10px"
+            data-dojo-attach-point="grpSymbolOptions">
+                <div data-dojo-attach-point="div_rdoLayerSym"
+                     style="height:30px;">
+                    <input name="a" data-dojo-type="dijit/form/RadioButton"
+                    data-dojo-attach-point="rdoLayerSym"
+                    data-dojo-attach-event="onChange:_rdoLayerSymChanged"
+                    title="${nls.rdoLayer}" />
+                    <span class="label">${nls.rdoLayer}</span>
+                </div>
+            </div>
+            <div class="jimu-r-row symPick" data-dojo-attach-point="layerSym"> </div>
 
-  <!--Symbol Options-->
-  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
-    <div data-dojo-attach-point="div_rdoLayerSym" style="height:30px;">
-      <input name="a" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoLayerSym" data-dojo-attach-event="onChange:_rdoLayerSymChanged" title="${nls.rdoLayer}" />
-      <span class="label">${nls.rdoLayer}</span>  
+            <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
+                <div data-dojo-attach-point="div_rdoEsriSym" style="height:30px;">
+                    <input name="a" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoEsriSym" data-dojo-attach-event="onChange:_rdoEsriSymChanged" title="${nls.rdoEsri}" />
+                    <span class="label">${nls.rdoEsri}</span>
+                </div>
+            </div>
+            <div data-dojo-attach-point="symbolPicker" data-dojo-type="jimu/dijit/SymbolPicker" class="jimu-r-row symPick"></div>
+
+            <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
+                <div data-dojo-attach-point="div_rdoCustomSym" style="vertical-align:middle">
+                    <input name="a" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoCustomSym" data-dojo-attach-event="onChange:_rdoCustomSymChanged" title="${nls.rdoCustom}" />
+                    <span class="label">${nls.rdoCustom}</span>
+                </div>
+            </div>
+            <div class="jimu-r-row" style="padding-top:10px">
+                <div data-dojo-attach-point="uploadCustomSymbol" class="uploadCustom"></div>
+                <div data-dojo-attach-point="customSymbolPlaceholder" class="customPlaceholder"></div>
+            </div>
+
+            <!--Clustering Options-->
+            <hr />
+            <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpClusterOptions">
+                <div data-dojo-attach-point="div_chkCluster">
+                    <input data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="chkClusterSym" title="${nls.chkCluster}" data-dojo-attach-event="onChange:_chkClusterChanged" />
+                    <span class="label">${nls.chkCluster}</span>
+                </div>
+            </div>
+
+            <div class="jimu-r-row" data-dojo-attach-point="grpClusterOptions" style="padding-top:16px;">
+                <div data-dojo-attach-point="div_clusterOptions" style="height:30px;">
+                    <input name="bb" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoCustomCluster" data-dojo-attach-event="onChange:_rdoCustomClusterChanged" title="${nls.defineClusterSymbol}" />
+                    <span class="label">${nls.defineClusterSymbol}</span>
+                    <div data-dojo-attach-point="clusterPicker" data-dojo-type="jimu/dijit/SymbolPicker" class="symPickers"></div>
+                </div>
+            </div>
+
+            <div class="jimu-r-row" data-dojo-attach-point="grpThemeClusterOptions" style="padding-top:16px;">
+                <div data-dojo-attach-point="div_themeClusterOptions" style="height:30px;">
+                    <input name="bb" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoThemeCluster" data-dojo-attach-event="onChange:_rdoThemeClusterChanged" title="${nls.defineThemeClusterSymbol}" />
+                    <span class="label">${nls.defineThemeClusterSymbol}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="label" style="padding-top:25px;font-weight: bold;">
+            ${nls.iconOptionsText}
+        </div>
+        <hr />
+        <div data-dojo-attach-point="div_iconOptions">
+            <!--Main Panel and cluster center Icon Options-->
+            <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpIconOptions">
+                <div data-dojo-attach-point="div_rdoLayerIcon" style="height:30px;">
+                    <input name="b" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoLayerIcon" data-dojo-attach-event="onChange:_rdoLayerIconChanged" title="${nls.rdoLayerIcon}" />
+                    <span class="label">${nls.rdoLayerIcon}</span>
+                </div>
+            </div>
+
+            <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpCustomIconOptions">
+                <div data-dojo-attach-point="div_rdoCustomIcon" style="vertical-align:middle">
+                    <input name="b" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoCustomIcon" data-dojo-attach-event="onChange:_rdoCustomIconChanged" title="${nls.rdoCustomIcon}" />
+                    <span class="label">${nls.rdoCustomIcon}</span>
+                </div>
+            </div>
+            <div class="jimu-r-row" style="padding-top:10px">
+                <div data-dojo-attach-point="uploadCustomIcon" class="uploadCustom"></div>
+                <div data-dojo-attach-point="customIconPlaceholder" class="customPlaceholder"></div>
+            </div>
+        </div>
+
+
+            <!--Footer-->
+            <div class="footer" style="padding-top:20px;">
+                <div class="jimu-btn ok" data-dojo-attach-point="btnOk">${nls.popupOk}</div>
+                <div class="jimu-btn cancel" data-dojo-attach-point="btnCancel">${nls.popupCancel}</div>
+            </div>
+
+            <input type="file"
+                   accept="image/png, image/jpeg, image/bmp, image/gif"
+                   data-dojo-attach-point="fileInput"
+                   style="opacity:0; width:0px; height:0px;">
+        </div>
+    <div data-dojo-attach-point="symbolPreview" class="symbolPreview">
+
     </div>
-  </div>
-  <div class="jimu-r-row symPick" data-dojo-attach-point="layerSym"> </div> 
+    <div data-dojo-attach-point="iconPreview" class="iconPreview">
 
-  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
-    <div data-dojo-attach-point="div_rdoEsriSym" style="height:30px;">
-      <input name="a" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoEsriSym" data-dojo-attach-event="onChange:_rdoEsriSymChanged" title="${nls.rdoEsri}" />
-      <span class="label">${nls.rdoEsri}</span>
     </div>
-  </div>
-  <div data-dojo-attach-point="symbolPicker" data-dojo-type="jimu/dijit/SymbolPicker" class="jimu-r-row symPick"></div>
-
-  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpSymbolOptions">
-    <div data-dojo-attach-point="div_rdoCustomSym" style="vertical-align:middle">
-      <input name="a" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoCustomSym" data-dojo-attach-event="onChange:_rdoCustomSymChanged" title="${nls.rdoCustom}" />
-      <span class="label">${nls.rdoCustom}</span> 
-    </div>
-  </div>
-  <div class="jimu-r-row" style="padding-top:10px">
-    <div data-dojo-attach-point="uploadCustomSymbol" class="uploadCustom"></div>
-    <div data-dojo-attach-point="customSymbolPlaceholder" class="customPlaceholder"></div>
-  </div>
-
-  <!--Clustering Options-->
-  <hr/>
-  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpClusterOptions">
-    <div data-dojo-attach-point="div_chkCluster">
-      <input data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="chkClusterSym" title="${nls.chkCluster}" data-dojo-attach-event="onChange:_chkClusterChanged"/>
-      <span class="label">${nls.chkCluster}</span>
-    </div>
-  </div>
-
-  <div class="jimu-r-row" data-dojo-attach-point="grpClusterOptions" style="padding-top:16px;">
-    <div data-dojo-attach-point="div_clusterOptions" style="height:30px;">
-      <span class="label">${nls.defineClusterSymbol}</span>
-      <div data-dojo-attach-point="clusterPicker" data-dojo-type="jimu/dijit/SymbolPicker" class="symPickers"></div>
-    </div>
-  </div>
-
-  <!--Main Panel and cluster center Icon Options-->
-  <hr />
-  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpIconOptions">
-    <div data-dojo-attach-point="div_rdoLayerIcon" style="height:30px;">
-      <input name="b" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoLayerIcon" data-dojo-attach-event="onChange:_rdoLayerIconChanged" title="${nls.rdoLayerIcon}" />
-      <span class="label">${nls.rdoLayerIcon}</span>
-    </div>
-  </div>
-
-  <div class="jimu-r-row" style="padding-top:10px" data-dojo-attach-point="grpCustomIconOptions">
-    <div data-dojo-attach-point="div_rdoCustomIcon" style="vertical-align:middle">
-      <input name="b" data-dojo-type="dijit/form/RadioButton" data-dojo-attach-point="rdoCustomIcon" data-dojo-attach-event="onChange:_rdoCustomIconChanged" title="${nls.rdoCustomIcon}" />
-      <span class="label">${nls.rdoCustomIcon}</span>
-    </div>
-  </div>
-  <div class="jimu-r-row" style="padding-top:10px">
-    <div data-dojo-attach-point="uploadCustomIcon" class="uploadCustom"></div>
-    <div data-dojo-attach-point="customIconPlaceholder" class="customPlaceholder"></div>
-  </div>
-
-
-  <!--Footer-->
-  <div class="footer" style="padding-top:20px;">
-    <div class="jimu-btn ok" data-dojo-attach-point="btnOk">${nls.popupOk}</div>
-    <div class="jimu-btn cancel" data-dojo-attach-point="btnCancel">${nls.popupCancel}</div>
-  </div>
-
-  <input type="file"
-         accept="image/png, image/jpeg, image/bmp, image/gif"
-         data-dojo-attach-point="fileInput"
-         style="opacity:0; width:0px; height:0px;">
 </div>
