@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////
-// Copyright © 2015 Esri. All Rights Reserved.
+// Copyright � 2015 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the 'License');
 // you may not use this file except in compliance with the License.
@@ -30,8 +30,10 @@ define(['dojo/_base/declare',
     'jimu/dijit/SymbolPicker',
     'jimu/BaseWidget',
     'jimu/dijit/Message',
+    'jimu/utils',
     'esri/layers/FeatureLayer',
     'esri/symbols/PictureMarkerSymbol',
+    "esri/symbols/SimpleLineSymbol",
     'dojo/text!./MySymbolPicker.html',
     'dojo/Evented',
     'jimu/dijit/SimpleTable'
@@ -53,8 +55,10 @@ define(['dojo/_base/declare',
     SymbolPicker1,
     BaseWidget,
     Message,
+    jimuUtils,
     FeatureLayer,
     PictureMarkerSymbol,
+    SimpleLineSymbol,
     template,
     Evented) {
     return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
@@ -75,11 +79,10 @@ define(['dojo/_base/declare',
       //    then it looks kind of smushed or stretched 
       // 5) Get the Symbol picker moved below its rdo button
       // 6) Need a way to define the symbol size for custom symbol
-      // 7) Icon is what needs to go to the other dialog
 
       constructor: function ( /*Object*/ options) {
         this.nls = options.nls;
-        this.row = options.tr;
+        this.row = options.callerRow;
         this.layerInfo = options.layerInfo;
         this.renderer = options.layerInfo.renderer;
         this.geometryType = options.layerInfo.geometryType;
@@ -89,10 +92,14 @@ define(['dojo/_base/declare',
 
       postCreate: function () {
         this.inherited(arguments);
+
+        //expects a valid geom type definition
+        var geoType = jimuUtils.getTypeByGeometryType(this.geometryType);
+
         this._loadLayerSymbol();
-        this._initSymbolPicker();
-        this._initClusterSymbolPicker();
-        this._addEventHandlers();
+        this._initSymbolPicker(geoType);
+        this._initClusterSymbolPicker(geoType);
+        this._addEventHandlers(geoType);
         this._initUI();
       },
 
@@ -115,16 +122,19 @@ define(['dojo/_base/declare',
               this.rdoCustomSym.set('checked', true);
               this._rdoEsriSymChanged(false);
               this._rdoLayerSymChanged(false);
-              this._createImageDataDiv(this.symbolInfo.symbol, true);
+
+              this._createImageDataDiv(this.symbolInfo.symbol, true, this.customSymbolPlaceholder);
               break;
           }
 
+
+          //set retained cluster options
           switch (this.symbolInfo.clusterType) {
             case 'ThemeCluster':
               this.rdoThemeCluster.set('checked', true);
               break;
             case 'CustomCluster':
-              this.rdoCustomCluster.set('checked', true)
+              this.rdoCustomCluster.set('checked', true);
               break;
           }
 
@@ -133,15 +143,17 @@ define(['dojo/_base/declare',
               this.rdoLayerIcon.set('checked', true);
               break;
             case 'CustomIcon':
-              this.rdoCustomIcon.set('checked', true)
+              this.rdoCustomIcon.set('checked', true);
+              this.resetIcon(this.symbolInfo.icon.url);
               break;
           }
 
           //set cluster options properties
-          this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);
           if (typeof (this.symbolInfo.clusterSymbol) !== 'undefined') {
             this.clusterPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.clusterSymbol));
           }
+          this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);
+          this._chkClusterChanged(this.symbolInfo.clusteringEnabled);
         } else {
           //default state
           this.rdoLayerSym.set('checked', true);
@@ -155,34 +167,52 @@ define(['dojo/_base/declare',
 
         this._createIconPreviewDiv();
         this._createSymbolPreviewDiv();
+
+        if (this.geometryType !== 'esriGeometryPoint') {
+          domStyle.set(this.parent_div_uploadCustomSymbol, "display", "none");
+        }
       },
 
-      _createSymbolPreviewDiv: function(){
+      resetIcon: function (s) {
+        this.customIconPlaceholder.innerHTML = "<div></div>";
+
+        var a = domConstruct.create("div", {
+          class: "customPlaceholder",
+          innerHTML: ['<img class="customPlaceholder" src="', s, '"/>'].join(''),
+          title: this.nls.editCustomIcon
+        });
+
+        this.customIconPlaceholder.innerHTML = a.innerHTML;
+      },
+
+      _createSymbolPreviewDiv: function () {
 
       },
 
-      _createIconPreviewDiv: function(){
+      _createIconPreviewDiv: function () {
         var m = this.map;
 
-        //TODO think about this...I am kind of leaning towards
-        //just using the light-gray canvas by default...otherwise I could get the image
-        //from the default basemap
-        if(typeof(m._layers["defaultBasemap"]) !== 'undefined'){
-          //var url = "http://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer";
-          var url = m._layers["defaultBasemap"]._url.path;
+        var _url, _sr;
+        if (typeof (m._layers["defaultBasemap"]) !== 'undefined') {
+          _url = m._layers["defaultBasemap"]._url.path;
+          _sr = m.spatialReference;
+        } else {
+          //TODO...would need to handle bboxSR for this...102100  
+          _url = "http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer";
+          _sr = "102100";
         }
-//TODO get extent from the map object
+        ////esriConfig.defaults.io.corsEnabledServers.push("sampleserver1.arcgisonline.com");
 
-        var _url = "http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Specialty/ESRI_StateCityHighway_USA/MapServer";
 
-        //esriConfig.defaults.io.corsEnabledServers.push("sampleserver1.arcgisonline.com");
-
+        var ext = m.extent;
         esriRequest({
           url: _url + "/export",
           content: {
             f: "json",
             format: "png",
-            bbox: "-115.8,30.4,-85.5,50.5"
+            bbox: ext.xmin + "," + ext.ymin + "," + ext.xmax + "," + ext.ymax,
+            size: "300,340",
+            bboxSR: _sr
           },
           handleAs: "json",
           load: lang.hitch(this, this.loadFunc),
@@ -190,28 +220,20 @@ define(['dojo/_base/declare',
         }, { usePost: false });
       },
 
-      loadFunc: function(image){
+      loadFunc: function (image) {
         domStyle.set(this.symbolPreview, "background-image", "url(" + image.href + ")");
+        domStyle.set(this.symbolPreview, "background-repeat", "no-repeat");
       },
 
-      errorFunc: function(error) {
+      errorFunc: function (error) {
         console.log("Error: ", error.message);
       },
 
-      _createImageDataDiv: function (sym, convert) {
+      _createImageDataDiv: function (sym, convert, node) {
         var symbol = convert ? jsonUtils.fromJson(sym) : sym;
-
-        if (typeof (symbol.setWidth) !== 'undefined') {
-          symbol.setWidth(25);
-          symbol.setHeight(25);
-        } else {
-          if (symbol.size > 20) {
-            symbol.setSize(20);
-          }
-        }
-        var a = domConstruct.create("div", { class: "imageDataGFX" }, this.customSymbolPlaceholder);
+        var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
         var mySurface = gfx.createSurface(a, 26, 26);
-        var descriptors = jsonUtils.getShapeDescriptors(symbol);
+        var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
         var shape = mySurface.createShape(descriptors.defaultShape)
                       .setFill(descriptors.fill)
                       .setStroke(descriptors.stroke);
@@ -219,10 +241,12 @@ define(['dojo/_base/declare',
         return a;
       },
 
-      _addEventHandlers: function(){
-        this.own(on(this.uploadCustomSymbol, 'click', lang.hitch(this, function (event) {
-          this._editIcon(this.tr, "Symbol");
-        })));
+      _addEventHandlers: function (geoType) {
+        if (geoType === 'point') {
+          this.own(on(this.uploadCustomSymbol, 'click', lang.hitch(this, function (event) {
+            this._editIcon(this.tr, "Symbol");
+          })));
+        }
 
         this.own(on(this.uploadCustomIcon, 'click', lang.hitch(this, function (event) {
           this._editIcon(this.tr, "Icon");
@@ -278,19 +302,26 @@ define(['dojo/_base/declare',
           }
         }
 
-        if (this.clusteringEnabled) {
+        if (this.clusteringEnabled && this.geometryType === 'esriGeometryPoint') {
           if (this.clusterType === "ThemeCluster") {
             this.clusterSymbol = "custom";
           } else {
             this.clusterSymbol = this.clusterPicker.getSymbol().toJson();
           }
-        }else{
+        } else {
           this.clusterSymbol = undefined;
+          this.clusteringEnabled = false;
+        }
+
+        if (symbol) {
+          if (typeof (symbol.toJson) !== 'undefined') {
+            symbol = symbol.toJson();
+          }
         }
 
         this.symbolInfo = {
           symbolType: this.symbolType,
-          symbol: symbol.toJson(),
+          symbol: symbol,
           clusterSymbol: this.clusterSymbol,
           clusteringEnabled: this.clusteringEnabled,
           icon: icon,
@@ -324,27 +355,27 @@ define(['dojo/_base/declare',
       _chkClusterChanged: function (v) {
         this.clusteringEnabled = v;
         html.setStyle(this.grpClusterOptions, 'display', v ? "block" : "none");
+        html.setStyle(this.grpThemeClusterOptions, 'display', v ? "block" : "none");      
       },
 
-      _rdoThemeClusterChanged:function(v){
+      _rdoThemeClusterChanged: function (v) {
         if (v) {
           this.clusterType = "ThemeCluster";
         }
       },
 
-      _rdoCustomClusterChanged:function(v){
+      _rdoCustomClusterChanged: function (v) {
         if (v) {
           this.clusterType = "CustomCluster";
-          //TODO hide the cluster symbol picker
         }
       },
 
       _rdoLayerIconChanged: function (v) {
         if (v) {
           this.iconType = "LayerIcon";
-          //TODO hide the upload icon tool
         }
-        html.setStyle(this.layerIcon, 'display', v ? "block" : "none");
+        html.setStyle(this.uploadCustomIcon, 'display', !v ? "block" : "none");
+        html.setStyle(this.customIconPlaceholder, 'display', !v ? "block" : "none");
       },
 
       _rdoCustomIconChanged: function (v) {
@@ -355,78 +386,180 @@ define(['dojo/_base/declare',
         html.setStyle(this.customIconPlaceholder, 'display', v ? "block" : "none");
       },
 
-      _initSymbolPicker: function(){
-        //var geoType = 'point';//jimuUtils.getTypeByGeometryType(layerInfo.geometryType);
-        //var symType = '';
-        //if (geoType === 'point') {
-        //  symType = 'marker';
-        //}
-        //else if (geoType === 'polyline') {
-        //  symType = 'line';
-        //}
-        //else if (geoType === 'polygon') {
-        //  symType = 'fill';
-        //}
-        //if (symType) {
-        //  this.symbolPicker.showByType(symType);
-        //}
-        this.symbolPicker.showByType('marker');
+      _initSymbolPicker: function (geoType) {
+        var symType = '';
+        if (geoType === 'point') {
+          symType = 'marker';
+        }
+        else if (geoType === 'polyline') {
+          symType = 'line';
+        }
+        else if (geoType === 'polygon') {
+          symType = 'fill';
+        }
+        this.symbolPicker.showByType(symType);
       },
 
-      _initClusterSymbolPicker: function () {
-        this.clusterPicker.showByType('fill');
+      _initClusterSymbolPicker: function (geoType) {
+        if (geoType === 'point') {
+          this.clusterPicker.showByType('fill');
+        }
+        var d = geoType === 'point' ? 'block' : 'none';
+        domStyle.set(this.parent_div_clusterOptions, "display", d);
       },
 
       _loadLayerSymbol: function () {
+
+        //TODO check for MapServer renderer types other than just classBreaks and uniqueValues...also see if they would ever come back with a nonPMS symbol type
+
         if (typeof (this.renderer) !== 'undefined') {
           var renderer = this.renderer;
           if (typeof (renderer.symbol) !== 'undefined') {
             this.symbol = this.renderer.symbol;
-            this.layerSym.innerHTML = this._createImageDataDiv(this.symbol, false).innerHTML;
+            //this.layerSym.innerHTML = this._createImageDataDiv(this.symbol, false, this.layerSym).innerHTML;
+            this._createImageDataDiv(this.renderer.symbol, true, this.layerSym);
           } else if (typeof (this.renderer.infos) !== 'undefined') {
-            //TODO should handle this differently...and show all..then make the user define the core symbol that would draw with the
-            //cluster graphic and in the panel
-
-            //this.symbol = this.renderer.infos[0].symbol;
-
-            this.layerSym.innerHTML = this._createCombinedImageDataDiv().innerHTML;
+            this.layerSym.innerHTML = this._createCombinedImageDataDiv(this.renderer.infos, false).innerHTML;
+          } else if (typeof (this.renderer.uniqueValueInfos) !== 'undefined') {
+            this.layerSym.innerHTML = this._createCombinedImageDataDiv(this.renderer.uniqueValueInfos, true).innerHTML;
+          } else if (typeof (this.renderer.classBreakInfos) !== 'undefined') {
+            this.layerSym.innerHTML = this._createCombinedImageDataDiv(this.renderer.classBreakInfos, true).innerHTML;
           }
         }
-
-        //This will just show the first symbol for the list...duplicating above while testing
-        //this.layerSym.innerHTML = this._createImageDataDiv(this.symbol, false).innerHTML;
-
-        //This will show all of the symbols from the renderer...would still need so way to let the user define the main icon
-
       },
 
-      _createCombinedImageDataDiv: function () {
+      _createImageDataDiv: function (sym, convert, node) {
+        var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
 
-        var a = domConstruct.create("div", { class: "imageDataGFXMulti" }, this.customSymbolPlaceholder);
+         // if (sym.url) {
 
-        var infos = this.renderer.infos;
-        for (var i = 0; i < infos.length; i++) {
-          var symbol = infos[i].symbol;
-          var b = domConstruct.create("div", { class: "imageDataGFX imageDataGFX2" }, a);
-          if (typeof (symbol.setWidth) !== 'undefined') {
-            symbol.setWidth(25);
-            symbol.setHeight(25);
-          } else {
-            if (symbol.size > 20) {
-              symbol.setSize(20);
-            }
-          }
+         //   //TODO check if this is different for different server releases
+         //   //var symbolUrl = this.layerInfo.url + "/images/" + sym.url
+         //   //b = domConstruct.create("div", {
+         //   //  class: "customPlaceholder",
+         //   //  innerHTML: ['<img class="customPlaceholder" src="', symbolUrl, '"/>'].join(''),
+         //   //  title: "A"
+         //   //});
+         //   //a.appendChild(b);
 
-          var mySurface = gfx.createSurface(b, 26, 26);
-          var descriptors = jsonUtils.getShapeDescriptors(symbol);
+         //   var testSymbol = jsonUtils.fromJson(sym);
+         //   if (typeof (this.symbol) === 'undefined') {
+         //     symbol = new PictureMarkerSymbol(symbolUrl, 13, 13);
+         //     this.symbol = symbol;
+         //   }
+         // } else if (sym.type === 'esriSLS') {
+            
+         //   symbol = jsonUtils.fromJson(sym);
+         //   var mySurface = gfx.createSurface(a, 26, 26);
+         //   var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
+         //   var shape = mySurface.createShape(descriptors.defaultShape)
+         //                 .setFill(descriptors.fill)
+         //                 .setStroke(descriptors.stroke);
+         //   shape.applyTransform({ dx: 13, dy: 13 });
+         //   //symbol = new SimpleLineSymbol(sym.style, sym.color, sym.width);
+         // }
+         //else {
+        var symbol = convert ? jsonUtils.fromJson(sym) : sym;
+        if (!symbol) {
+          symbol = sym;
+        }
+        this.symbol = symbol;
+          
+          var mySurface = gfx.createSurface(a, 26, 26);
+          var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
           var shape = mySurface.createShape(descriptors.defaultShape)
                         .setFill(descriptors.fill)
                         .setStroke(descriptors.stroke);
           shape.applyTransform({ dx: 13, dy: 13 });
-          a.insertBefore(b, a.firstChild);
-          a.appendChild(b);
+       // }
+        return a;
+      },
+
+      _createCombinedImageDataDiv: function (infos, bb) {
+        var a = domConstruct.create("div", { class: "imageDataGFXMulti" }, this.customSymbolPlaceholder);
+
+        for (var i = 0; i < infos.length; i++) {
+          var sym = infos[i].symbol;
+
+          //if (symbol.url) {
+
+          //  var testSymbol = jsonUtils.fromJson(sym);
+          //  var mySurface = gfx.createSurface(a, 26, 26);
+          //  var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
+          //  var shape = mySurface.createShape(descriptors.defaultShape)
+          //                .setFill(descriptors.fill)
+          //                .setStroke(descriptors.stroke);
+          //  shape.applyTransform({ dx: 13, dy: 13 });
+
+          //  //TODO...I don't think this is necessary if we use symbol = jsonUtils.fromJson(symbol);
+
+
+          //    //TODO check if this is different for different server releases
+          //    var symbolUrl = this.layerInfo.url + "/images/" + symbol.url
+          //    //var s = "http://arcgis-gov-1244222493.us-west-2.elb.amazonaws.com/arcgis/rest/services/Transportation511/MapServer/4/images/7639cc5226ceff0eff9754047b189c64";
+          //    b = domConstruct.create("div", {
+          //      class: "customPlaceholder",
+          //      innerHTML: ['<img class="customPlaceholder" src="', symbolUrl, '"/>'].join(''),
+          //      title: "A"
+          //    });
+          //    a.appendChild(b);
+
+          //    if (typeof (this.symbol) === 'undefined') {
+          //      symbol = new PictureMarkerSymbol(symbolUrl, 13, 13);
+          //      this.symbol = symbol;
+          //    }
+          //} else {
+
+            var symbol = jsonUtils.fromJson(sym);
+            if (!symbol) {
+              symbol = sym;
+            }
+            if (typeof (this.symbol) === 'undefined') {
+              this.symbol = symbol;
+            }
+
+            var b = domConstruct.create("div", { class: "imageDataGFX imageDataGFX2" }, a);
+            var mySurface = gfx.createSurface(b, 26, 26);
+            var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
+            var shape = mySurface.createShape(descriptors.defaultShape)
+                          .setFill(descriptors.fill)
+                          .setStroke(descriptors.stroke);
+            shape.applyTransform({ dx: 13, dy: 13 });
+            a.insertBefore(b, a.firstChild);
+            a.appendChild(b);
+         // }
         }
         return a;
+      },
+
+      setSym: function (symbol) {
+        if (typeof (symbol.setWidth) !== 'undefined') {
+          if (this.geometryType === 'esriGeometryPoint') {
+            symbol.setWidth(25);
+          }
+          //else {
+          //  symbol.setWidth(2);
+          //}
+          if (typeof (symbol.setHeight) !== 'undefined') {
+            symbol.setHeight(25);
+          }
+        } else {
+          //used for point symbols from hosted services
+          if (typeof (symbol.size) !== 'undefined') {
+            if (symbol.size > 20) {
+              symbol.setSize(20);
+            }
+          }
+          //used for point symbols from MapServer services
+          if (typeof (symbol.width) !== 'undefined') {
+            symbol.width = 20;
+          }
+          if (typeof (symbol.height) !== 'undefined') {
+            symbol.height = 20;
+          }
+        }
+     
+        return symbol;
       },
 
       _editIcon: function (tr, type) {
@@ -434,10 +567,10 @@ define(['dojo/_base/declare',
         reader.onload = lang.hitch(this, function () {
           var node;
           var title;
-          if(type === "Symbol"){
+          if (type === "Symbol") {
             node = this.customSymbolPlaceholder;
             title = this.nls.editCustomSymbol;
-          }else{
+          } else {
             node = this.customIconPlaceholder;
             title = this.nls.editCustomIcon;
           }

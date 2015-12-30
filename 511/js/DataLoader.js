@@ -1,5 +1,5 @@
-///////////////////////////////////////////////////////////////////////////
-// Copyright © 2015 Esri. All Rights Reserved.
+ï»¿///////////////////////////////////////////////////////////////////////////
+// Copyright ï¿½ 2015 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,15 +29,16 @@ define([
    'esri/request',
    'esri/tasks/query',
    'esri/tasks/QueryTask',
-   'esri/symbols/SimpleLineSymbol'
+   'esri/symbols/SimpleLineSymbol',
+   'esri/renderers/SimpleRenderer',
+   "esri/arcgis/utils"
 ],
 
 function (declare, array, dojoEvent, lang, Color, on, DeferredList,
-  FeatureLayer, Graphic, SpatialReference, Extent, esriRequest, Query, QueryTask, SimpleLineSymbol) {
+  FeatureLayer, Graphic, SpatialReference, Extent, esriRequest, Query, QueryTask, SimpleLineSymbol, SimpleRenderer, arcgisUtils) {
   var dataLoader = declare(null, {
-    //Loads data from parent layers url to a new layer instance
+    //Loads data from parent layers url or itemID to a layer instance
     // handles updating of the counter node in the widgets panel for this item
-    //Used for Polygon and line geom types
 
     _parentLayer: null,
     _parentLayerObject: null,
@@ -94,11 +95,14 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
       this._lyrType = options.layerType;
       this.p = options.parent;
       this.filter = options.filter;
-      //derived from options
       this._url = this._lyrInfo.url;
       this._renderer = this._parentLayerObject.renderer;
       this._geometryType = this._parentLayerObject.geometryType;
       this.symbolData = options.symbolData;
+      this.itemId = options.itemId;
+      this.renderer = options.renderer;
+      this.geometryType = options.geometryType;
+      this.drawingInfo = options.drawingInfo;
 
       if (this._renderer) {
         if (typeof (this._renderer.attributeField) !== "undefined") {
@@ -107,7 +111,25 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
         }
       }
 
-      this._infoTemplate = this._parentLayerObject.infoTemplate
+      this._infoTemplate = this._parentLayerObject.infoTemplate;
+
+      //TODO May be better to check and do this loop in settings also
+      if (!this._infoTemplate) {
+        if(typeof(this._parentLayer.originOperLayer) !== 'undefined'){
+          if (typeof (this._parentLayer.originOperLayer.parentLayerInfo) !== 'undefined') {
+            if (typeof (this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo) !== 'undefined') {
+              var popupInfos = this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo.infoTemplates;
+              var url = this._parentLayerObject.url;
+              var index = url.substr(url.lastIndexOf('/') + 1);
+              if (popupInfos.hasOwnProperty(index)) {
+                this._infoTemplate = popupInfos[index].infoTemplate;
+              }
+            }
+          }
+        }   
+      }
+
+      this._fieldNames = [];
       this.getFieldNames();
 
       if (this._parentLayer.layerType !== "ArcGISStreamLayer") {
@@ -180,7 +202,11 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
           }
         }
         if (this._symbolField) {
-          this._fieldNames.push(this._symbolField);
+          if (this._fieldNames.length > 0) {
+            if (this._fieldNames.indexOf(this._symbolField) === -1) {
+              this._fieldNames.push(this._symbolField);
+            }
+          }
         }
       }
       if (this._fieldNames.length < 1) {
@@ -197,23 +223,7 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
       for (var i = 0; i < this._features.length; i++) {
         var item = this._features[i];
         if (typeof (item.geometry) !== 'undefined') {
-          var graphicOptions = null;
-          if (typeof (item.geometry.rings) !== 'undefined') {
-            graphicOptions = {
-              geometry: {
-                rings: item.geometry.rings,
-                "spatialReference": { "wkid": sr.wkid }
-              }
-            }
-          } else if (typeof (item.geometry.paths) !== 'undefined') {
-            graphicOptions = {
-              geometry: {
-                paths: item.geometry.paths,
-                "spatialReference": { "wkid": sr.wkid }
-              }
-            }
-          }
-          var gra = new Graphic(graphicOptions);
+          var gra = new Graphic(this.getGraphicOptions(item, sr));
           gra.setAttributes(item.attributes);
           if (this._infoTemplate) {
             gra.setInfoTemplate(this._infoTemplate);
@@ -277,30 +287,14 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
                       for (var ii = 0; ii < queryResults[i][1].features.length; ii++) {
                         var item = queryResults[i][1].features[ii];
                         if (typeof (item.geometry) !== 'undefined') {
-                          var graphicOptions = null;
-                          if (typeof (item.geometry.rings) !== 'undefined') {
-                            graphicOptions = {
-                              geometry: {
-                                rings: item.geometry.rings,
-                                "spatialReference": { "wkid": sr.wkid }
-                              }
-                            }
-                          } else if (typeof (item.geometry.paths) !== 'undefined') {
-                            graphicOptions = {
-                              geometry: {
-                                paths: item.geometry.paths,
-                                "spatialReference": { "wkid": sr.wkid }
-                              }
-                            }
-                          }
-                          var gra = new Graphic(graphicOptions);
+                          var gra = new Graphic(this.getGraphicOptions(item, sr));
                           gra.setAttributes(item.attributes);
                           if (this._infoTemplate) {
                             gra.setInfoTemplate(this._infoTemplate);
                           }
 
                           this.mapLayer.add(gra);
-                          this._features.push(gra);
+                          this._features.push(item);
                         }
                       }
                     }
@@ -312,6 +306,16 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
                   //}
 
                   this.loaded = true;
+                  
+                  //TODO should handle this properly and try to re-initate the 
+                  //the query if we can tell what's wrong
+                  //else {
+                  //  if(typeof(queryResults[0][1].details) !== 'undefined'){
+                  //    for (var ii = 0; ii < length; ii++) {
+                  //      console.log("Query failed: " + queryResults[0][1].details[ii]);
+                  //    }      
+                  //  }
+                  //}
                 }
               }));
             } else {
@@ -320,6 +324,35 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
           }
         }));
       }
+    },
+
+    getGraphicOptions: function (item, sr) {
+      var graphicOptions;
+      if (typeof (item.geometry.rings) !== 'undefined') {
+        graphicOptions = {
+          geometry: {
+            rings: item.geometry.rings,
+            "spatialReference": { "wkid": sr.wkid }
+          }
+        }
+      } else if (typeof (item.geometry.paths) !== 'undefined') {
+        graphicOptions = {
+          geometry: {
+            paths: item.geometry.paths,
+            "spatialReference": { "wkid": sr.wkid }
+          }
+        }
+      } else {
+        graphicOptions = {
+          geometry: { 
+            x: item.geometry.x,
+            y: item.geometry.y,
+            "spatialReference": { "wkid": sr.wkid }
+          },
+          symbol: this.renderer.symbol
+        }
+      }
+      return graphicOptions;
     },
 
     createMapLayer: function () {
@@ -342,18 +375,32 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
         //default info from parent layer should be used
         // to set options for other standard Feature Layers as well
         var drawingInfo = undefined;
+        var test = false;
         if (this._parentLayer.resourceInfo) {
           drawingInfo = this._parentLayer.resourceInfo.drawingInfo;
         } else if (this._parentLayerObject.drawingInfo) {
           drawingInfo = this._parentLayerObject.drawingInfo;
+        } else if (this._lyrInfo.drawingInfo) {
+          drawingInfo = this._lyrInfo.drawingInfo;
+          test = true;
         }
-
-        layerDef = {
-          "geometryType": this._geometryType,
-          "objectIdField": this._parentLayerObject.objectIdField,
-          "fields": this._parentLayerObject.fields,
-          "drawingInfo": drawingInfo
-        };
+        if (test) {
+          //TODO should set this earlier now that it's saved with layerInfo from settings
+          this._geometryType = this._lyrInfo.geometryType;
+          layerDef = {
+            "geometryType": this._lyrInfo.geometryType,
+            "objectIdField": this._lyrInfo.oidFieldName,
+            "fields": this._lyrInfo.fields,
+            "drawingInfo": drawingInfo
+          };
+        } else {
+          layerDef = {
+            "geometryType": this._geometryType,
+            "objectIdField": this._parentLayerObject.objectIdField,
+            "fields": this._parentLayerObject.fields,
+            "drawingInfo": drawingInfo
+          };
+        }
       }
 
       this.mapLayer = new FeatureLayer({
@@ -369,17 +416,72 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
         infoTemplate: this._infoTemplate
       });
 
+      //TODO need to check if a custom symbol has been defined for this
+      if (this.symbolData) {
+        if (this.symbolData.symbolType !== 'LayerSymbol') {
+          this._renderer = new SimpleRenderer({
+            "type": "simple",
+            "label": "",
+            "description": "",
+            "symbol": this.symbolData.symbol
+          });
+        }
+      }
       if (this._renderer) {
         this.mapLayer.setRenderer(this._renderer);
+      }
+      else if (this.renderer && typeof (this.mapLayer.renderer) === 'undefined') {
+        this.mapLayer.setRenderer(this.renderer);
       }
     },
 
     refreshFeatures: function (url) {
-      if (url) {
-        this.loadData(url);
-      } else if (this._url) {
-        this.loadData(this._url);
-      }
+      //TODO need to use the configured symbol if one is there
+
+      if (this.itemId) {
+        arcgisUtils.getItem(this.itemId).then(lang.hitch(this, function (response) {
+          var fcItemInfo = response.item;
+          var featureCollection = response.itemData;
+          //TODO only do this if the json has changed
+
+          //TODO...need to get the correct layer(s)
+          //Loop through and compare by ID or ID an <X> combination
+          var fs = featureCollection.layers[0].featureSet.features;
+
+          var shouldUpdate = true;
+          if (fs.length < 10000) {
+            shouldUpdate = JSON.stringify(this._features) !== JSON.stringify(fs);
+            alert("stringify says: " + shouldUpdate);
+          }
+
+          if (shouldUpdate) {
+            //if valid response then clear and load
+            this._features = [];
+            this.mapLayer.clear();
+            //TODO is this right or should I use the items SR
+            var sr = this._map.spatialReference;
+
+            for (var i = 0; i < fs.length; i++) {
+              var graphicOptions = null;
+              var item = fs[i];
+              var gra = new Graphic(this.getGraphicOptions(item, sr));
+              gra.setAttributes(item.attributes);
+              if (this._infoTemplate) {
+                gra.setInfoTemplate(this._infoTemplate);
+              }
+              this.mapLayer.add(gra);
+              this._features.push(item);
+            }
+            this.countFeatures();
+          }
+          }));
+        } else {
+        if (url) {
+          this.loadData(url);
+        } else if (this._url) {
+          this.loadData(this._url);
+        }
+      } 
     },
 
     flashFeatures: function () {

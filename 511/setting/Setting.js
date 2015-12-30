@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// Copyright © 2014 Esri. All Rights Reserved.
+// Copyright � 2014 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,12 +33,14 @@ define([
     'jimu/dijit/LoadingShelter',
     'jimu/dijit/Filter',
     'jimu/dijit/Popup',
+    'jimu/dijit/Message',
     'jimu/dijit/_FeaturelayerServiceChooserContent',
     'esri/request',
     'esri/symbols/jsonUtils',
     'dijit/TooltipDialog',
     'dijit/popup',
     'dojo/_base/lang',
+    'dojo/DeferredList',
     'dojo/on',
     'dojox/gfx',
     'dojo/dom-class',
@@ -69,12 +71,14 @@ define([
     LoadingShelter,
     Filter,
     Popup,
+    Message,
     _FeaturelayerServiceChooserContent,
     esriRequest,
     jsonUtils,
     TooltipDialog,
     dijitPopup,
     lang,
+    DeferredList,
     on,
     gfx,
     domClass,
@@ -92,16 +96,14 @@ define([
       _tableInfos: null,
       mpi: null,
       layer_options: [],
-      refreshLayersCount: 0,
       refreshLayers: [],
+      geomTypeResults: [],
       hasUpdatedInfo: false,
 
-      // 1) Emit an event when a key property, that will require a widget update, changes
-      // not sure if event or otherwise is best...basically I think I just need to know if the filter
-      // or if the symbolData changes...if not I think the logic as is will just work
-      // 2) Add cluster SVG behind the icon in the settings table
+      // 2) Add cluster SVG or other sumbol props beside the icon in the settings table
       // 3) Finish the remove of the second download script button
       // 4) Label should reset or clear on selection changed for the drop down?
+
 
       postCreate: function () {
         this.inherited(arguments);
@@ -133,8 +135,46 @@ define([
           if (OpLyr.newSubLayers.length > 0) {
             this._recurseOpLayers(OpLyr.newSubLayers, options);
           } else if (OpLyr.featureCollection) {
-            if (OpLayer.layers.length > 1) {
+            if (OpLyr.layers.length > 1) {
               this._recurseOpLayers(OpLyr.layers, options);
+            }
+          } else if (OpLyr.originOperLayer) {
+            var OpLyr2 = OpLyr.originOperLayer;
+            if (OpLyr2.featureCollection) {
+              if (OpLyr2.featureCollection.layers.length > 1) {
+                this._recurseOpLayers(OpLyr2.featureCollection.layers, options);
+              } else {
+                
+                options.unshift({
+                  label: OpLyr.title,
+                  value: OpLyr.title,
+                  url: undefined,
+                  use: OpLyr.use,
+                  imageData: OpLyr.imageData,
+                  id: OpLyr.id,
+                  geometryType: OpLyr2.featureCollection.layers[0].layerObject.geometryType,
+                  type: OpLyr.type,
+                  renderer: OpLyr2.featureCollection.layers[0].layerObject.renderer,
+                  itemId: OpLyr2.itemId
+                });
+              }
+            } else {
+
+              if (typeof (OpLyr.layerObject.geometryType) === 'undefined') {
+                this.setGeometryType(OpLyr.layerObject);
+              }
+
+              options.unshift({
+                label: OpLyr.title,
+                value: OpLyr.title,
+                url: OpLyr.layerObject.url,
+                use: OpLyr.use,
+                imageData: OpLyr.imageData,
+                id: OpLyr.id,
+                type: OpLyr.type,
+                renderer: OpLyr.layerObject.renderer,
+                geometryType: OpLyr.layerObject.geometryType
+              });
             }
           } else {
             //TODO determine and pass in geom type here
@@ -143,6 +183,10 @@ define([
             // in addition to that...should I also just fire off the queries to the datasources at this time??
             //  if we did that then we could basically just pass the layer instances to the widget...update the props as they change 
             //  and further minimize the delay we see on panel load...need to think through this further
+            if (typeof (OpLyr.layerObject.geometryType) === 'undefined') {
+              this.setGeometryType(OpLyr.layerObject);
+            }
+
             options.unshift({
               label: OpLyr.title,
               value: OpLyr.title,
@@ -151,7 +195,8 @@ define([
               imageData: OpLyr.imageData,
               id: OpLyr.id,
               type: OpLyr.type,
-              renderer: OpLyr.layerObject.renderer
+              renderer: OpLyr.layerObject.renderer,
+              geometryType: OpLyr.layerObject.geometryType
             });
           }
         }
@@ -174,7 +219,7 @@ define([
 
         this.layerTable.clear();
         for (var i = 0; i < this.config.layerInfos.length; i++) {
-          
+
           var lyrInfo = this.config.layerInfos[i];
           this._populateLayerRow(lyrInfo);
         }
@@ -270,25 +315,25 @@ define([
 
             if (v) {
               var lyrInfo = this._getLayerOptionByValue(value);
-              if (typeof (lyrInfo.url) !== 'undefined' && lyrInfo.url !== '') {
+              //if (typeof (lyrInfo.url) !== 'undefined' && lyrInfo.url !== '') {
                 this.refreshLayers.push(value);
                 var rO = query('.refreshOff', this.refreshOptions.domNode)[0];
-                if(rO){
+                if (rO) {
                   html.removeClass(rO, 'refreshOff');
                   html.addClass(rO, 'refreshOn');
                 }
-              } else {
-                this.activeLayerInfo = lyrInfo;
-                this._onSetUrlClick();
-              }
+              //} else {
+                //this.activeLayerInfo = lyrInfo;
+                //this._onSetUrlClick();
+              //}
             } else {
               var i = this.refreshLayers.indexOf(value);
               if (i > -1) {
                 this.refreshLayers.splice(i, 1);
 
-                if(this.refreshLayers.length === 0){
+                if (this.refreshLayers.length === 0) {
                   var rO = query('.refreshOn', this.refreshOptions.domNode)[0];
-                  if(rO){
+                  if (rO) {
                     html.removeClass(rO, 'refreshOn');
                     html.addClass(rO, 'refreshOff');
                   }
@@ -317,91 +362,6 @@ define([
         }, tr));
       },
 
-      _onSetUrlClick: function () {
-        this.serviceChooserContent = new _FeaturelayerServiceChooserContent({
-          url: ""
-        });
-        this.shelter = new LoadingShelter({
-          hidden: true
-        });
-
-        this.urlChooserPopup = new Popup({
-          titleLabel: this.nls.urlPopupTitle,
-          autoHeight: true,
-          content: this.serviceChooserContent.domNode,
-          container: window.jimuConfig.layoutId,
-          width: 640
-        });
-        this.shelter.placeAt(this.urlChooserPopup.domNode);
-        html.setStyle(this.serviceChooserContent.domNode, 'width', '580px');
-        html.addClass(
-          this.serviceChooserContent.domNode,
-          'override-feature-service-chooser-content'
-        );
-
-        this.serviceChooserContent.own(
-          on(this.serviceChooserContent, 'validate-click', lang.hitch(this, function () {
-            html.removeClass(
-              this.serviceChooserContent.domNode,
-              'override-feature-service-chooser-content'
-            );
-          }))
-        );
-        this.serviceChooserContent.own(
-          on(this.serviceChooserContent, 'ok', lang.hitch(this, this._onSelectUrlOk))
-        );
-        this.serviceChooserContent.own(
-          on(this.serviceChooserContent, 'cancel', lang.hitch(this, this._onSelectUrlCancel))
-        );
-      },
-
-      _onSelectUrlOk: function (evt) {
-        if (!(evt && evt[0] && evt[0].url && this.domNode)) {
-          return;
-        }
-        this.shelter.show();
-        esriRequest({
-          url: evt[0].url,
-          content: {
-            f: 'json'
-          },
-          handleAs: 'json',
-          callbackParamName: 'callback'
-        }).then(lang.hitch(this, function (response) {
-          this.shelter.hide();
-          if (response) {
-            this.activeLayerInfo.url = evt[0].url;
-            this.refreshLayers.push(this.activeLayerInfo.value);
-            var rO = query('.refreshOff', this.refreshOptions.domNode)[0];
-            if (rO) {
-              html.removeClass(this.refreshOptions.domNode, 'refreshOff');
-              html.addClass(this.refreshOptions.domNode, 'refreshOn');
-            }
-            if (this.urlChooserPopup) {
-              this.urlChooserPopup.close();
-              this.urlChooserPopup = null;
-            }
-          } else {
-            new Message({
-              message: this.nls.invalidUrlTip
-            });
-          }
-        }), lang.hitch(this, function (err) {
-          console.error(err);
-          this.shelter.hide();
-          new Message({
-            message: this.nls.invalidUrlTip
-          });
-        }));
-      },
-
-      _onSelectUrlCancel: function () {
-        if (this.urlChooserPopup) {
-          this.urlChooserPopup.close();
-          this.urlChooserPopup = null;
-        }
-      },
-
       _getLayerOptionByValue: function (value) {
         for (var i = 0; i < this.layer_options.length; i++) {
           var lo = this.layer_options[i];
@@ -421,6 +381,7 @@ define([
       },
 
       _showFilter: function (url) {
+        //TODO init this with any expressions from the web map layer
         var filter = new Filter({
           noFilterTip: this.nls.noFilterTip,
           style: "width:100%;margin-top:22px;"
@@ -470,6 +431,13 @@ define([
               this._recurseOpLayers(Node.layers, pOptions);
             }
           } else {
+
+            if (typeof (Node.layerObject) !== 'undefined') {
+              if (typeof (Node.layerObject.geometryType) === 'undefined') {
+                this.setGeometryType(Node.layerObject);
+              }
+            }
+
             pOptions.push({
               label: Node.title,
               value: Node.title,
@@ -494,7 +462,7 @@ define([
           callerRow: tr,
           layerInfo: lo,
           value: selectLayersValue,
-          symbolInfo: typeof(this.curRow.symbolData) !== 'undefined' ? this.curRow.symbolData : lo.symbolData,
+          symbolInfo: typeof (this.curRow.symbolData) !== 'undefined' ? this.curRow.symbolData : lo.symbolData,
           map: this.map
         };
         var sourceDijit = new SymbolPicker(options);
@@ -531,12 +499,21 @@ define([
 
       _createImageDataDiv: function (sym) {
         var symbol = jsonUtils.fromJson(sym);
-        var a;
 
+        if (!symbol) {
+          symbol = sym;
+        }
+
+        var a;
+        //TODO...should I avoid hard coding these??
         if (symbol) {
           if (typeof (symbol.setWidth) !== 'undefined') {
-            symbol.setWidth(27);
-            symbol.setHeight(27);
+            if (typeof (symbol.setHeight) !== 'undefined') {
+              symbol.setWidth(27);
+              symbol.setHeight(27);
+            } else {
+              symbol.setWidth(2);
+            }
           } else {
             if (symbol.size > 20) {
               symbol.setSize(20);
@@ -550,11 +527,57 @@ define([
                         .setFill(descriptors.fill)
                         .setStroke(descriptors.stroke);
           shape.applyTransform({ dx: 14, dy: 14 });
-        } else if (typeof(sym.url) !== 'undefined') {
+        } else if (typeof (sym.url) !== 'undefined') {
           a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
           domStyle.set(a, "background-image", "url(" + sym.url + ")");
+          domStyle.set(a, "background-repeat", "no-repeat");
         }
         return a;
+      },
+
+      //TODO...need to ensure that we have the geometry type...when this is done
+      //should remove this query from the widget
+      setGeometryType: function (OpLayer) {
+        var queries = [];
+        if (typeof (OpLayer.url) !== 'undefined') {
+          if (OpLayer.url.indexOf("MapServer")) {
+            queries.push(esriRequest({ "url": OpLayer.url + "?f=json" }));
+          }
+        }
+
+        if (queries.length > 0) {
+          var queryList = new DeferredList(queries);
+          queryList.then(lang.hitch(this, function (queryResults) {
+            if (queryResults) {
+              if(queryResults.length > 0) {
+                var resultInfo = queryResults[0][1];
+                if (this.layer_options[resultInfo.id].value === resultInfo.name) {
+                  //TODO...need to loop through the results and find the match if this condition is not hit
+                  //...not sure this would ever be the case but better safe than sorry
+                  this.layer_options[resultInfo.id].geometryType = resultInfo.geometryType;
+                  if(typeof(resultInfo.drawingInfo) !== 'undefined'){
+                    this.layer_options[resultInfo.id].renderer = resultInfo.drawingInfo.renderer;
+                    this.layer_options[resultInfo.id].drawingInfo = resultInfo.drawingInfo;
+
+                    //Also need the OID field and fields
+                    this.layer_options[resultInfo.id].fields = resultInfo.fields;
+
+                    var f;
+                    for (var i = 0; i < resultInfo.fields.length; i++) {
+                      f = resultInfo.fields[i];
+                      if(f.type === "esriFieldTypeOID"){
+                        break
+                      }                 
+                    }
+                    this.layer_options[resultInfo.id].oidFieldName = f;
+                  }
+                } else {
+                  console.log("IDs don't match!");
+                }
+              }
+            }
+          }));
+        }
       },
 
       uploadImage: function () {
@@ -585,6 +608,17 @@ define([
       },
 
       getConfig: function () {
+
+        if (query('.refreshOn', this.refreshOptions.domNode)[0]) {
+          if (!this.refreshInterval.value) {
+            new Message({
+              message: this.nls.missingRefreshValue
+            });
+            //TODO need to figure out the correct way to prevent the popup from closing...just returning here doesn't work
+            return;
+          }
+        }
+
         dijitPopup.close();
 
         var rows = this.layerTable.getRows();
@@ -605,7 +639,13 @@ define([
             url: lo.url,
             type: lo.type,
             id: lo.id,
-            symbolData: tr.symbolData
+            symbolData: tr.symbolData ? tr.symbolData : lo.symbolData,
+            geometryType: lo.geometryType,
+            itemId: lo.itemId,
+            renderer: lo.renderer,
+            drawingInfo: lo.drawingInfo,
+            fields: lo.fields,
+            oidFieldName: lo.oidFieldName
           };
 
           var td = query('.imageDataGFX', tr)[0];
@@ -618,9 +658,13 @@ define([
         this.config.mainPanelIcon = this.panelMainIcon.innerHTML;
         this.config.refreshInterval = this.refreshInterval.value;
 
-        if (this.refreshLayersCount > 0) {
-          this.config.refreshEnabled = true;
-        }
+        this.config.refreshEnabled = this.refreshLayers.length > 0 ? true : false;
+       
+        //TODO test running the queries here
+        //still thinking through this...but if I grabbed the features here then on open it would just be a matter
+        // of loading the appropriate map layer...this would definately minimize the load time
+        // but it would also be writing a static copy of the data to the config...not sure if that is a bad idea or not
+        //
 
         return this.config;
       },

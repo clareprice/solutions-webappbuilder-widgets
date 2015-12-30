@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// Copyright � 2015 Esri. All Rights Reserved.
+// Copyright ? 2015 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,47 +28,6 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
   ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin], {
     baseClass: 'jimu-widget-511',
-
-
-    //TODO
-    // 1) Map Service Layers...need to loop through the sublayers and get infoTemplates...started but not done
-      // Need to update LayerVisManaqger to handle the same - done
-      // Deal with the settings issue why you have to open twice - done
-    // 2) Test Refresh updates
-    // 3) Add show legend - done-ish (if we want it more compact then it would require some time....this is just using the JS API dijit for legend and you can only choose between arrange left or right)
-    // 4) Add menu
-    // 5) Test Stream Layer...looks good...need to figure out how to get the count - done
-    // 7) Support query on the layer?...main thing to deal with would be to add another edit button...with simple-table we could add only one...the next would need to be custom...I have worked through this before to support a custom row delete...the one part that I didn;t finish on that one was to show/hide the image based on hover
-    // 9) Cleanup layers that have been removed on re-configure
-    // 10) Need a final destroy method at the right point to clean up added layers
-    // 11) Accept URL for FC layers...do a popup if they click the checkbox I will add for "refreshLayer"
-    // 12) Layers in panel need to be in the same order as the settings
-    // 13) Cancel pending queries for data-loader or CL
-    // 14) point layers need to draw on top
-    // 15) need to handle layer re-order on widget-change...panel is good...map is not
-    // 16) Need to update point symbols for graphic if the config settings have changed for the icon
-    // 17) after save and re-open the settings are not persisted correctly
-    // 18) Get user configured symbol into the graphic symbol
-    // 19) Sanitize calls
-    // 20) jsLint
-    // 21) Mobile css changes
-    // 22) Need to handle re-configure...if symbol, order or whatever changes then the widget needs to be refreshed
-    //     should not need to re-query the data but would need to remove layers no longer used and update things like the symbol
-    // 23) Need to add support for clusterEnabled === false and need to handle if clusterEnabled changes...would delete the layer and readd for the new type
-    // 24)
-    // 25)
-    // 26)
-    // 27)
-    // 28)
-    // 29)
-    // 30)
-    // 31)
-    // 32)
-    // 33)
-    // 34)
-    // 35)
-    // 36)
-    // 37)
 
     name: "511",
     opLayers: null,
@@ -102,7 +61,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     startup: function () {
-        this.inherited(arguments);
+      this.inherited(arguments);
     },
 
     onOpen: function () {
@@ -192,15 +151,19 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }
 
       //refresh the cluster layers at the same interval
-      this.refreshInterval = setInterval(lang.hitch(this, this.refreshLayers), (this.config.refreshInterval * 60000));
+      //TODO only need to reset this if the value has changed 
+      //if (!this.refreshInterval) {
+        //this.refreshInterval = setInterval(lang.hitch(this, this.refreshLayers), (this.config.refreshInterval * 60000));
+      //}
+
+      this.refreshInterval = setInterval(lang.hitch(this, this.refreshLayers), (this.config.refreshInterval * 30000));
     },
 
-    refreshLayers: function(){
+    refreshLayers: function () {
       for (var key in this.layerList) {
         var lyr = this.layerList[key];
         if (lyr.type === "ClusterLayer" || lyr.type === "FeatureCollectionLayer") {
-          alert("check if this should be switched to reloadData now that I have changed the func in clusterLayer");
-          lyr.layerObject.refreshFeatures();
+          lyr.dataLoader.refreshFeatures();
         }
       }
     },
@@ -218,35 +181,37 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               this.opLayerInfos = operLayerInfos._layerInfos;
             }
 
-            var queries = [];
-            for (var i = 0; i < this.configLayerInfos.length; i++) {
-              var lyrInfo = this.configLayerInfos[i];
-              //if it's a mapservice layer we need to get the geometry type
-              if (lyrInfo.url.indexOf("MapServer")) {
-                queries.push(esriRequest({ "url": lyrInfo.url + "?f=json" }));
-                this.queryLookupList.push({ "url": lyrInfo.url, "geomType": "" });
-              }
-            }
+            //var queries = [];
+            //for (var i = 0; i < this.configLayerInfos.length; i++) {
+            //  var lyrInfo = this.configLayerInfos[i];
+            //  //if it's a mapservice layer we need to get the geometry type
+            //  if (typeof (lyrInfo.url) !== 'undefined') {
+            //    if (lyrInfo.url.indexOf("MapServer")) {
+            //      queries.push(esriRequest({ "url": lyrInfo.url + "?f=json" }));
+            //      this.queryLookupList.push({ "url": lyrInfo.url, "geomType": "" });
+            //    }
+            //  }
+            //}
 
-            if (queries.length > 0) {
-              var queryList = new DeferredList(queries);
-              queryList.then(lang.hitch(this, function (queryResults) {
-                if (queryResults) {
-                  var sr = this.map.spatialReference;
-                  for (var i = 0; i < queryResults.length; i++) {
-                    this.queryLookupList[i].geomType = queryResults[i][1].geometryType;
-                  }
-                }
+            //if (queries.length > 0) {
+            //  var queryList = new DeferredList(queries);
+            //  queryList.then(lang.hitch(this, function (queryResults) {
+            //    if (queryResults) {
+            //      var sr = this.map.spatialReference;
+            //      for (var i = 0; i < queryResults.length; i++) {
+            //        this.queryLookupList[i].geomType = queryResults[i][1].geometryType;
+            //      }
+            //    }
 
-                //_createPanelUI:
-                // create the main widget UI
-                // update this.layerList based on the layers that have been configured as widget sources
-                // create cluster layers for any point layers that are in this.layerList
-                this._createPanelUI(this.configLayerInfos);
-              }));
-            } else {
+            //    //_createPanelUI:
+            //    // create the main widget UI
+            //    // update this.layerList based on the layers that have been configured as widget sources
+            //    // create cluster layers for any point layers that are in this.layerList
+            //    this._createPanelUI(this.configLayerInfos);
+            //  }));
+            //} else {
               this._createPanelUI(this.configLayerInfos);
-            }
+            //}
           }));
       }
     },
@@ -285,7 +250,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             this._updateLayerList(l, lyrInfo, "Feature Layer");
             break;
           }
-        } else if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISStreamLayer") {
+        } else if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISStreamLayer" || typeof (layer.layerType) === 'undefined') {
           if (layer.layerObject && layer.id === lyrInfo.id) {
             this._updateLayerList(layer, lyrInfo, "Feature Layer");
             break;
@@ -363,23 +328,25 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     _updateLayerList: function (lyr, lyrInfo, lyrType) {
-      var geomType = lyr.layerObject.geometryType;
-      if(typeof(geomType) === 'undefined'){
-        if (this.queryLookupList) {
-          for (var i = 0; i < this.queryLookupList.length; i++) {
-            if (this.queryLookupList[i].url === lyrInfo.url) {
-              geomType = this.queryLookupList[i].geomType;
-              break;
-            }
-          }
-        }
+      //var geomType = lyr.layerObject.geometryType;
+      //TODO don't really need any of this queryLookupList stuff anymore since I get the geom type in settings
+      var geomType = lyrInfo.geometryType;
+      //if (typeof (geomType) === 'undefined') {
+      //  if (this.queryLookupList) {
+      //    for (var i = 0; i < this.queryLookupList.length; i++) {
+      //      if (this.queryLookupList[i].url === lyrInfo.url) {
+      //        geomType = this.queryLookupList[i].geomType;
+      //        break;
+      //      }
+      //    }
+      //  }
 
-        if (typeof (geomType) !== 'undefined') {
-          this.getLayer(lyr, lyrInfo, lyrType, geomType, { "Dummy": "Results" });
-        }
-      } else {
+      //  if (typeof (geomType) !== 'undefined') {
+      //    this.getLayer(lyr, lyrInfo, lyrType, geomType, { "Dummy": "Results" });
+      //  }
+      //} else {
         this.getLayer(lyr, lyrInfo, lyrType, geomType);
-      }
+      //}
     },
 
     getLayer: function (lyr, lyrInfo, lyrType, geomType, results) {
@@ -404,13 +371,24 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               }
             }
           }
-
-          l = this._getClusterLayer(lyrInfo, lyr.layerObject, lyrType, results, infoTemplate);
-          this.layerList[l.id] = {
-            type: "ClusterLayer",
-            layerObject: l,
-            visible: true
-          };
+          if (lyrInfo.symbolData.clusteringEnabled) {
+            l = this._getClusterLayer(lyrInfo, lyr.layerObject, lyrType, results, infoTemplate);
+            this.layerList[l.id] = {
+              type: "ClusterLayer",
+              layerObject: l,
+              visible: true
+            };
+          } else {
+            var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
+            l = dl.mapLayer;
+            this.layerList[l.id] = {
+              type: "FeatureCollectionLayer",
+              layerObject: l,
+              visible: true,
+              pl: lyr,
+              dataLoader: dl
+            };
+          }
         } else if (lyr.layerType === "ArcGISStreamLayer") {
           var dl = this._getStreamLayer(lyrInfo, lyr, lyrType);
           l = dl.mapLayer;
@@ -418,6 +396,16 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             type: "StreamLayer",
             layerObject: l,
             visible: true,
+            dataLoader: dl
+          };
+        } else {
+          var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
+          l = dl.mapLayer;
+          this.layerList[l.id] = {
+            type: "FeatureCollectionLayer",
+            layerObject: l,
+            visible: true,
+            pl: lyr,
             dataLoader: dl
           };
         }
@@ -511,7 +499,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         "map": this.map
       }, symbolDiv2);
 
-      legend.startup();
+      //legend.startup();
     },
 
     _addClusterLegend: function (layer, img) {
@@ -557,8 +545,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
         //update the icon if it has changed
         var n = domConstruct.toDom(lyrInfo.imageData);
-        if (JSON.stringify(clusterLayer.icon) !== JSON.stringify(n.src)) {        
-          clusterLayer.icon = n.src;      
+        if (JSON.stringify(clusterLayer.icon) !== JSON.stringify(n.src)) {
+          clusterLayer.icon = n.src;
         }
         domConstruct.destroy(n.id);
 
@@ -568,7 +556,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         }
 
         if (reloadData) {
-          clusterLayer.reloadData(clusterLayer.url);
+          clusterLayer.refreshFeatures(clusterLayer.url);
         }
       } else {
         var features = [];
@@ -581,7 +569,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           map: this.map,
           node: dom.byId("recNum_" + potentialNewID),
           features: !hasFeatures ? undefined : features,
-          infoTemplate: typeof(lyr.infoTemplate) !== 'undefined' ? lyr.infoTemplate : infoTemplate,
+          infoTemplate: typeof (lyr.infoTemplate) !== 'undefined' ? lyr.infoTemplate : infoTemplate,
           url: lyrInfo.url,
           refreshInterval: this.config.refreshInterval,
           refreshEnabled: this.config.refreshEnabled,
@@ -629,7 +617,11 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           parent: this.w,
           filter: lyrInfo.filter,
           refresh: lyrInfo.refresh,
-          symbolData: lyrInfo.symbolData
+          symbolData: lyrInfo.symbolData,
+          geometryType: lyrInfo.geometryType,
+          itemId: lyrInfo.itemId,
+          renderer: lyrInfo.renderer,
+          drawingInfo: lyrInfo.drawingInfo
         });
       }
       return dataLoader;
@@ -706,9 +698,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           if (lyr.type === 'ClusterLayer') {
             //TODO still need to wrok on that
             lyr.layerObject.flashFeatures();
-        } else if(lyr.type === 'FeatureCollectionLayer'){
-          lyr.dataLoader.flashFeatures();
-        }
+          } else if (lyr.type === 'FeatureCollectionLayer') {
+            lyr.dataLoader.flashFeatures();
+          }
           this.layerList[obj.id].visible = true;
           if (typeof (lyr.pl) !== 'undefined') {
             lyr.pl.visibility = true;

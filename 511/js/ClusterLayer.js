@@ -77,6 +77,23 @@ define([
       //this.query = options.query;
       //this.queryPending = false;
       this.infoTemplate = options.infoTemplate;
+
+      //TODO May be better to check and do this loop in settings also
+      if (!this.infoTemplate) {
+        if (typeof (this._parentLayer.originOperLayer) !== 'undefined') {
+          if (typeof (this._parentLayer.originOperLayer.parentLayerInfo) !== 'undefined') {
+            if (typeof (this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo) !== 'undefined') {
+              var popupInfos = this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo.infoTemplates;
+              var url = this._parentLayerObject.url;
+              var index = url.substr(url.lastIndexOf('/') + 1);
+              if (popupInfos.hasOwnProperty(index)) {
+                this.infoTemplate = popupInfos[index].infoTemplate;
+              }
+            }
+          }
+        }
+      }
+
       this._fieldNames = [];
       //this will limit the fields to those fequired for the popup
       if (this.infoTemplate) {
@@ -159,7 +176,7 @@ define([
       var qt = new QueryTask(url);
       qt.executeForIds(q).then(lang.hitch(this, function (results) {
         if (this.node) {
-          this.node.innerHTML = results.length;
+          this.node.innerHTML = results ? results.length : 0;
         }
       }));
     },
@@ -285,9 +302,8 @@ define([
       }
     },
 
-    reloadData: function () {
+    refreshFeatures: function () {
       if (this.url) {
-        this._setupSymbols();
         this.loadData(this.url);
       }
     },
@@ -359,16 +375,20 @@ define([
           var g = graphics[i];
           if (x % 2) {
             var s = g.symbol;
-            if (typeof (s.setOutline) === 'function') {
-              s.setOutline(cls)
+            if (typeof (s) !== 'undefined') {
+              if (typeof (s.setOutline) === 'function') {
+                s.setOutline(cls)
+              }
+              g.setSymbol(s);
             }
-            g.setSymbol(s);
           } else {
             var s = g.symbol;
-            if (typeof (s.setOutline) === 'function') {
-              s.setOutline(cls2)
+            if (typeof (s) !== 'undefined') {
+              if (typeof (s.setOutline) === 'function') {
+                s.setOutline(cls2)
+              }
+              g.setSymbol(s);
             }
-            g.setSymbol(s);
           }
         }
         this.redraw();
@@ -378,12 +398,16 @@ define([
           for (var i = 0; i < graphics.length; i++) {
             var g = graphics[i];
             var s = g.symbol;
-            if (typeof (s.setOutline) === 'function') {
-              s.setOutline(cls4)
+            if (typeof (s) !== 'undefined') {
+              if (typeof (s.setOutline) === 'function') {
+                s.setOutline(cls4)
+              }
+              g.setSymbol(s);
             }
-            g.setSymbol(s);
           }
           this.redraw();
+          //TODO handle in a better way
+          this.clusterFeatures();
         }
       }), 600);
     },

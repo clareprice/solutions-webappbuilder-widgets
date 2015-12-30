@@ -59,7 +59,7 @@ define(['dojo/_base/declare',
       // to the inital state when the widget is closed
       this._initalLayerVisibility = {}
       array.forEach(this._opLayers._operLayers, lang.hitch(this, function (layer) {
-        if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISMapServiceLayer") {
+        if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISMapServiceLayer" || typeof (layer.layerType) === 'undefined') {
           if (layer.layerObject && this.shouldCheck(layer)) {
             this._initalLayerVisibility[layer.id] = {
               type: layer.layerType,
