@@ -236,11 +236,6 @@ define([
                       }
                     }
 
-                    //TODO this is a sloppy workaround until I get all the timing correct
-                    //if (this._map.graphicsLayerIds.indexOf(this.id) === -1) {
-                    //  //this._map.addLayer(this);
-                    //}
-
                     //TODO...figure out a better test here JSON.stringify does not like itwhen you have too many features
                     //it fell over with 150,000 for sure have not really tested it out too far
                     var shouldUpdate = true;
@@ -326,21 +321,17 @@ define([
           if (shouldUpdate) {
             //if valid response then clear and load
             this._features = [];
-            //this.mapLayer.clear();
+
             //TODO is this right or should I use the items SR
             var sr = this._map.spatialReference;
 
             for (var i = 0; i < fs.length; i++) {
-              //var graphicOptions = null;
               var item = fs[i];
               if (item.geometry) {
-                //var gra = new Graphic(this.getGraphicOptions(item, sr));
-                //gra.setAttributes(item.attributes);
-                //if (this._infoTemplate) {
-                //  gra.setInfoTemplate(this._infoTemplate);
-                //}
-                //this.mapLayer.add(gra);
-                this._features.push(item);
+                this._features.push({
+                  geometry: new Point(item.geometry.x, item.geometry.y, item.geometry.spatialReference),
+                  attributes: item.attributes
+                });
               } else {
                 console.log("Null geometry skipped");
               }

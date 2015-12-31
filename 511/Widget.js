@@ -528,7 +528,10 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           features = [];
           for (var i = 0; i < lyr.graphics.length; i++) {
             var g = lyr.graphics[i];
-            features.push({geometry: g.geometry, attributes: g.attributes});
+            features.push({
+              geometry: new Point(g.geometry.x, g.geometry.y, g.geometry.spatialReference),
+              attributes: g.attributes
+            });
             //features.push(g);
           }
         }
