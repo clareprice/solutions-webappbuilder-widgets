@@ -131,7 +131,13 @@ define([
         var options = [];
         for (var i = 0; i < this.opLayers._layerInfos.length; i++) {
           var OpLyr = this.opLayers._layerInfos[i];
+          //var lo = OpLyr.layerObject;
+          //var isFC = false;
+          //if(lo && lo.hasOwnProperty("type")){
+          //  isFC = lo.type === "FeatureCollection";
+          //}
 
+          //if (OpLyr.newSubLayers.length > 0 && !isFC) {
           if (OpLyr.newSubLayers.length > 0) {
             this._recurseOpLayers(OpLyr.newSubLayers, options);
           } else if (OpLyr.featureCollection) {
@@ -437,16 +443,31 @@ define([
                 this.setGeometryType(Node.layerObject);
               }
             }
+            var OpLyr2;
+            var w;
+            if (Node.hasOwnProperty("parentLayerInfo")) {
+              if (Node.parentLayerInfo.hasOwnProperty("originOperLayer")) {
+                OpLyr2 = Node.parentLayerInfo.originOperLayer;
+              }
+            }
+
+            var u;
+            if (Node.layerObject) {
+              if (Node.layerObject.url) {
+                u = Node.layerObject.url;
+              }
+            }
 
             pOptions.push({
               label: Node.title,
               value: Node.title,
-              url: Node.layerObject ? Node.layerObject.url : "",
-              use: Node.use,
+              url: u,
               imageData: Node.imageData,
               id: Node.id,
               type: Node.type,
-              lyrObj: Node.layerObject
+              itemId: OpLyr2 ? OpLyr2.itemId : undefined,
+              renderer: Node.layerObject.renderer,
+              geometryType: Node.layerObject.geometryType
             });
           }
         }));

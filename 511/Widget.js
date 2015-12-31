@@ -153,7 +153,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       //refresh the cluster layers at the same interval
       //TODO only need to reset this if the value has changed 
       //if (!this.refreshInterval) {
-        //this.refreshInterval = setInterval(lang.hitch(this, this.refreshLayers), (this.config.refreshInterval * 60000));
+      //this.refreshInterval = setInterval(lang.hitch(this, this.refreshLayers), (this.config.refreshInterval * 60000));
       //}
 
       this.refreshInterval = setInterval(lang.hitch(this, this.refreshLayers), (this.config.refreshInterval * 30000));
@@ -162,8 +162,10 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     refreshLayers: function () {
       for (var key in this.layerList) {
         var lyr = this.layerList[key];
-        if (lyr.type === "ClusterLayer" || lyr.type === "FeatureCollectionLayer") {
+        if (lyr.type === "FeatureCollectionLayer") {
           lyr.dataLoader.refreshFeatures();
+        } else if (lyr.type === "ClusterLayer") {
+          lyr.layerObject.refreshFeatures();
         }
       }
     },
@@ -181,37 +183,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               this.opLayerInfos = operLayerInfos._layerInfos;
             }
 
-            //var queries = [];
-            //for (var i = 0; i < this.configLayerInfos.length; i++) {
-            //  var lyrInfo = this.configLayerInfos[i];
-            //  //if it's a mapservice layer we need to get the geometry type
-            //  if (typeof (lyrInfo.url) !== 'undefined') {
-            //    if (lyrInfo.url.indexOf("MapServer")) {
-            //      queries.push(esriRequest({ "url": lyrInfo.url + "?f=json" }));
-            //      this.queryLookupList.push({ "url": lyrInfo.url, "geomType": "" });
-            //    }
-            //  }
-            //}
-
-            //if (queries.length > 0) {
-            //  var queryList = new DeferredList(queries);
-            //  queryList.then(lang.hitch(this, function (queryResults) {
-            //    if (queryResults) {
-            //      var sr = this.map.spatialReference;
-            //      for (var i = 0; i < queryResults.length; i++) {
-            //        this.queryLookupList[i].geomType = queryResults[i][1].geometryType;
-            //      }
-            //    }
-
-            //    //_createPanelUI:
-            //    // create the main widget UI
-            //    // update this.layerList based on the layers that have been configured as widget sources
-            //    // create cluster layers for any point layers that are in this.layerList
-            //    this._createPanelUI(this.configLayerInfos);
-            //  }));
-            //} else {
-              this._createPanelUI(this.configLayerInfos);
-            //}
+            this._createPanelUI(this.configLayerInfos);
           }));
       }
     },
@@ -257,7 +229,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           } else if (layer.featureCollection) {
             for (var iii = 0; iii < layer.featureCollection.layers.length; iii++) {
               var lyr = layer.featureCollection.layers[iii];
-              if (layer.id === lyrInfo.id) {
+              if (lyr.id === lyrInfo.id || layer.id === lyrInfo.id) {
                 this._updateLayerList(lyr, lyrInfo, "Feature Collection");
                 break;
               }
@@ -328,33 +300,15 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     _updateLayerList: function (lyr, lyrInfo, lyrType) {
-      //var geomType = lyr.layerObject.geometryType;
-      //TODO don't really need any of this queryLookupList stuff anymore since I get the geom type in settings
       var geomType = lyrInfo.geometryType;
-      //if (typeof (geomType) === 'undefined') {
-      //  if (this.queryLookupList) {
-      //    for (var i = 0; i < this.queryLookupList.length; i++) {
-      //      if (this.queryLookupList[i].url === lyrInfo.url) {
-      //        geomType = this.queryLookupList[i].geomType;
-      //        break;
-      //      }
-      //    }
-      //  }
-
-      //  if (typeof (geomType) !== 'undefined') {
-      //    this.getLayer(lyr, lyrInfo, lyrType, geomType, { "Dummy": "Results" });
-      //  }
-      //} else {
-        this.getLayer(lyr, lyrInfo, lyrType, geomType);
-      //}
+      this.getLayer(lyr, lyrInfo, lyrType, geomType);
     },
 
     getLayer: function (lyr, lyrInfo, lyrType, geomType, results) {
+
+      //TODO...this is way to redundant
+
       var l = null;
-
-      //TODO...update this to deal with cluster not-enabled
-      // will basically just create feature collection layer for points also
-
       if (geomType === "esriGeometryPoint") {
         if (lyr.layerType === "ArcGISFeatureLayer" || results) {
 
@@ -399,15 +353,25 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             dataLoader: dl
           };
         } else {
-          var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
-          l = dl.mapLayer;
-          this.layerList[l.id] = {
-            type: "FeatureCollectionLayer",
-            layerObject: l,
-            visible: true,
-            pl: lyr,
-            dataLoader: dl
-          };
+          if (lyrInfo.symbolData.clusteringEnabled) {
+            l = this._getClusterLayer(lyrInfo, lyr.layerObject, lyrType, results, infoTemplate);
+            this.layerList[l.id] = {
+              type: "ClusterLayer",
+              layerObject: l,
+              visible: true
+            };
+          } else {
+            var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
+            l = dl.mapLayer;
+            this.layerList[l.id] = {
+              type: "FeatureCollectionLayer",
+              layerObject: l,
+              visible: true,
+              pl: lyr,
+              dataLoader: dl
+            };
+          }
+
         }
       } else {
         var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
@@ -559,8 +523,15 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           clusterLayer.refreshFeatures(clusterLayer.url);
         }
       } else {
-        var features = [];
-        var hasFeatures = (lyrType === "Feature Collection") ? true : false;
+        var features;
+        if (lyrType === "Feature Collection") {
+          features = [];
+          for (var i = 0; i < lyr.graphics.length; i++) {
+            var g = lyr.graphics[i];
+            features.push({geometry: g.geometry, attributes: g.attributes});
+            //features.push(g);
+          }
+        }
         var n = domConstruct.toDom(lyrInfo.imageData);
         var options = {
           name: lyrInfo.label + this.UNIQUE_APPEND_VAL_CL,
@@ -568,7 +539,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           icon: n.src,
           map: this.map,
           node: dom.byId("recNum_" + potentialNewID),
-          features: !hasFeatures ? undefined : features,
+          features: features,
           infoTemplate: typeof (lyr.infoTemplate) !== 'undefined' ? lyr.infoTemplate : infoTemplate,
           url: lyrInfo.url,
           refreshInterval: this.config.refreshInterval,
@@ -576,7 +547,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           mapServiceResults: results,
           filter: lyrInfo.filter,
           refresh: lyrInfo.refresh,
-          symbolData: lyrInfo.symbolData
+          symbolData: lyrInfo.symbolData,
+          parentLayer: lyr,
+          itemId: lyrInfo.itemId
         };
         domConstruct.destroy(n.id);
         clusterLayer = new ClusterLayer(options);

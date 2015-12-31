@@ -34,14 +34,15 @@ define([
    'esri/tasks/query',
    'esri/tasks/QueryTask',
    'esri/symbols/jsonUtils',
-], function (declare, array, dojoEvent, lang, Color, on, DeferredList, GraphicsLayer, Graphic, SpatialReference, Extent, Point, PictureMarkerSymbol, SimpleMarkerSymbol, SimpleLineSymbol, esriRequest, Query, QueryTask, jsonUtils) {
+   "esri/arcgis/utils"
+], function (declare, array, dojoEvent, lang, Color, on, DeferredList, GraphicsLayer, Graphic, SpatialReference, Extent, Point, PictureMarkerSymbol, SimpleMarkerSymbol, SimpleLineSymbol, esriRequest, Query, QueryTask, jsonUtils, arcgisUtils) {
   var clusterLayer = declare('ClusterLayer', [GraphicsLayer], {
 
     cancelRequest: false,
     icon: null,
 
     constructor: function (options) {
-
+      this._parentLayer = options.parentLayer;
       this.clusterGraphics = null;
       this.cancelRequest = false;
       this.name = options.name;
@@ -52,6 +53,7 @@ define([
       this.color = Color.fromString(this.colorStr);
       this.filter = options.filter;
       this.symbolData = options.symbolData;
+      this.itemId = options.itemId;
 
       this._setupSymbols();
 
@@ -303,7 +305,50 @@ define([
     },
 
     refreshFeatures: function () {
-      if (this.url) {
+      if (this.itemId) {
+        arcgisUtils.getItem(this.itemId).then(lang.hitch(this, function (response) {
+          var fcItemInfo = response.item;
+          var featureCollection = response.itemData;
+          var fcLayer;
+          for (var i = 0; i < featureCollection.layers.length; i++) {
+            var fcl = featureCollection.layers[i];
+            if (fcl.layerDefinition.name === this._parentLayer.name) {
+              fcLayer = fcl;
+              break;
+            }
+          }
+          var fs = fcLayer.featureSet.features;
+          var shouldUpdate = true;
+          if (fs.length < 10000) {
+            //shouldUpdate = JSON.stringify(this._features) !== JSON.stringify(fs);
+          }
+
+          if (shouldUpdate) {
+            //if valid response then clear and load
+            this._features = [];
+            //this.mapLayer.clear();
+            //TODO is this right or should I use the items SR
+            var sr = this._map.spatialReference;
+
+            for (var i = 0; i < fs.length; i++) {
+              //var graphicOptions = null;
+              var item = fs[i];
+              if (item.geometry) {
+                //var gra = new Graphic(this.getGraphicOptions(item, sr));
+                //gra.setAttributes(item.attributes);
+                //if (this._infoTemplate) {
+                //  gra.setInfoTemplate(this._infoTemplate);
+                //}
+                //this.mapLayer.add(gra);
+                this._features.push(item);
+              } else {
+                console.log("Null geometry skipped");
+              }
+            }
+            this.clusterFeatures();
+          }
+        }));
+      } else if (this.url) {
         this.loadData(this.url);
       }
     },

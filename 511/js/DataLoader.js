@@ -219,17 +219,27 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
       //load inital data fromFeatureCollection layer in the map
       //TODO need to be able to filter at this level also
       this.mapLayer.clear();
+      var features = [];
       var sr = this._map.spatialReference;
+      var updateFeatures = false;
       for (var i = 0; i < this._features.length; i++) {
         var item = this._features[i];
-        if (typeof (item.geometry) !== 'undefined') {
+        if (typeof (item.geometry) !== 'undefined' && item.geometry) {
+          updateFeatures = true;
           var gra = new Graphic(this.getGraphicOptions(item, sr));
           gra.setAttributes(item.attributes);
           if (this._infoTemplate) {
             gra.setInfoTemplate(this._infoTemplate);
           }
+          features.push({
+            geometry: item.geometry,
+            attributes: item.attributes
+          });
           this.mapLayer.add(gra);
         }
+      }
+      if (updateFeatures) {
+        this._features = features;
       }
     },
 
@@ -441,17 +451,19 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
       if (this.itemId) {
         arcgisUtils.getItem(this.itemId).then(lang.hitch(this, function (response) {
           var fcItemInfo = response.item;
-          var featureCollection = response.itemData;
-          //TODO only do this if the json has changed
-
-          //TODO...need to get the correct layer(s)
-          //Loop through and compare by ID or ID an <X> combination
-          var fs = featureCollection.layers[0].featureSet.features;
-
+          var featureCollection = response.itemData; 
+          var fcLayer;
+          for (var i = 0; i < featureCollection.layers.length; i++) {
+            var fcl = featureCollection.layers[i];
+            if (fcl.layerDefinition.name === this._parentLayer.layerDefinition.name) {
+              fcLayer = fcl;
+              break;
+            }
+          }
+          var fs = fcLayer.featureSet.features;
           var shouldUpdate = true;
           if (fs.length < 10000) {
             shouldUpdate = JSON.stringify(this._features) !== JSON.stringify(fs);
-            alert("stringify says: " + shouldUpdate);
           }
 
           if (shouldUpdate) {
@@ -464,13 +476,17 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
             for (var i = 0; i < fs.length; i++) {
               var graphicOptions = null;
               var item = fs[i];
-              var gra = new Graphic(this.getGraphicOptions(item, sr));
-              gra.setAttributes(item.attributes);
-              if (this._infoTemplate) {
-                gra.setInfoTemplate(this._infoTemplate);
+              if (item.geometry) {
+                var gra = new Graphic(this.getGraphicOptions(item, sr));
+                gra.setAttributes(item.attributes);
+                if (this._infoTemplate) {
+                  gra.setInfoTemplate(this._infoTemplate);
+                }
+                this.mapLayer.add(gra);
+                this._features.push(item);
+              } else {
+                console.log("Null geometry skipped");
               }
-              this.mapLayer.add(gra);
-              this._features.push(item);
             }
             this.countFeatures();
           }
