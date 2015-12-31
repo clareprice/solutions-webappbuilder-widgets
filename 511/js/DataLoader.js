@@ -119,10 +119,12 @@ function (declare, array, dojoEvent, lang, Color, on, DeferredList,
           if (typeof (this._parentLayer.originOperLayer.parentLayerInfo) !== 'undefined') {
             if (typeof (this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo) !== 'undefined') {
               var popupInfos = this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo.infoTemplates;
-              var url = this._parentLayerObject.url;
-              var index = url.substr(url.lastIndexOf('/') + 1);
-              if (popupInfos.hasOwnProperty(index)) {
-                this._infoTemplate = popupInfos[index].infoTemplate;
+              if (popupInfos) {
+                var url = this._parentLayerObject.url;
+                var index = url.substr(url.lastIndexOf('/') + 1);
+                if (popupInfos.hasOwnProperty(index)) {
+                  this._infoTemplate = popupInfos[index].infoTemplate;
+                }
               }
             }
           }

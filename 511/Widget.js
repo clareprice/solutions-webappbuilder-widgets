@@ -48,6 +48,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     popupSelectionChanged: null,
     currentClusterLayer: null,
 
+    //TODO...clear the refresh interval if clustering enabled has changed 
+
+
     postCreate: function () {
       this.inherited(arguments);
 
@@ -55,13 +58,21 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
       this.queryLookupList = [];
       this.layerList = {};
-
+      this.loadStaticData = this.config.loadStaticData;
       //populates this.opLayers from this.map and creates the panel
       this._initWidget();
     },
 
     startup: function () {
       this.inherited(arguments);
+      this.loadStaticData = this.config.loadStaticData;
+      //TODO...enable this when load static data into FC is unchecked
+      if (!this.loadStaticData) {
+        this.own(on(this.map, "extent-change", lang.hitch(this, this._mapExtentChange)));
+        if (!this.loadStaticData) {
+          this._mapExtentChange();
+        }
+      }
     },
 
     onOpen: function () {
@@ -81,6 +92,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       if (this.config.refreshEnabled) {
         this.enableRefresh();
       }
+
+
 
       this.layerVisibilityManager.setLayerVisibility(this.layerList, false);
 
@@ -332,7 +345,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               layerObject: l,
               visible: true
             };
-          } else {
+          } else if(!lyrInfo.refresh && this.loadStaticData){
             var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
             l = dl.mapLayer;
             this.layerList[l.id] = {
@@ -341,6 +354,14 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               visible: true,
               pl: lyr,
               dataLoader: dl
+            };
+          } else {
+            l = lyr.layerObject;
+            this.layerList[l.id] = {
+              type: l.type,
+              layerObject: l,
+              visible: true,
+              pl: lyr
             };
           }
         } else if (lyr.layerType === "ArcGISStreamLayer") {
@@ -360,7 +381,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               layerObject: l,
               visible: true
             };
-          } else {
+          } else if (!lyrInfo.refresh && this.loadStaticData) {
             var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
             l = dl.mapLayer;
             this.layerList[l.id] = {
@@ -370,10 +391,18 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               pl: lyr,
               dataLoader: dl
             };
+          } else {
+            l = lyr.layerObject;
+            this.layerList[l.id] = {
+              type: l.type,
+              layerObject: l,
+              visible: true,
+              pl: lyr
+            };
           }
 
         }
-      } else {
+      } else if (!lyrInfo.refresh && this.loadStaticData) {
         var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
         l = dl.mapLayer;
         this.layerList[l.id] = {
@@ -382,6 +411,14 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           visible: true,
           pl: lyr,
           dataLoader: dl
+        };
+      } else {
+        l = lyr.layerObject;
+        this.layerList[l.id] = {
+          type: l.type,
+          layerObject: l,
+          visible: true,
+          pl: lyr
         };
       }
 
@@ -422,6 +459,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         this._addClusterLegend(layer, lyrInfo.imageData);
         layer.node = recNum;
         layer.clusterFeatures();
+      } else {
+        this._addLegend(layer);
+        this.layerList[layer.id].node = recNum;
       }
 
       //this._addLegend(layer)
@@ -535,11 +575,13 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             //features.push(g);
           }
         }
+        //change this to pretty much just pass the layerInfo...layerInfo should contain all the other stuff that we 
+        // have to test for all over the place...all this should be captured up front as a part of the config experience
         var n = domConstruct.toDom(lyrInfo.imageData);
         var options = {
           name: lyrInfo.label + this.UNIQUE_APPEND_VAL_CL,
           id: potentialNewID,
-          icon: n.src,
+          icon: lyrInfo.symbolData.icon,
           map: this.map,
           node: dom.byId("recNum_" + potentialNewID),
           features: features,
@@ -552,7 +594,12 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           refresh: lyrInfo.refresh,
           symbolData: lyrInfo.symbolData,
           parentLayer: lyr,
-          itemId: lyrInfo.itemId
+          itemId: lyrInfo.itemId,
+          renderSymbols: lyrInfo.symbolData.renderSymbols,
+          renderer: lyr.renderer,
+          imD: lyrInfo.imageData,
+          imD2: n.src,
+          s: lyrInfo.symbolData.s
         };
         domConstruct.destroy(n.id);
         clusterLayer = new ClusterLayer(options);
@@ -773,6 +820,75 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       while (parentNode.hasChildNodes()) {
         parentNode.removeChild(parentNode.lastChild);
       }
+    },
+
+    /////Testing without loading all layers into new FCs
+    _mapExtentChange: function () {
+      var queries = [];
+      var updateNodes = [];
+
+      for (var key in this.layerList) {
+        var lyr = this.layerList[key];
+        //cluster layers will update the node on their own
+        if (lyr.type !== 'ClusterLayer') {
+          if (typeof (lyr.layerObject) === 'undefined') {
+            console.log("A");
+          } else {
+
+            var node = dom.byId("recNum_" + lyr.layerObject.id);
+            var ext = this.map.extent;
+
+            //TODO expand this to account for subLayers in FC if not already doing so
+            var isFC = false;
+            if (lyr.pl) {
+              if (lyr.pl.featureSet && !(lyr.type === "FeatureCollectionLayer")) {
+                isFC = true;
+              }
+            }
+
+            if (lyr) {
+              //Want to avoid this if a new FC is generated
+              if (isFC) {
+                node.innerHTML = this._checkCoincidence(ext, lyr.layerObject);
+              } else if (lyr.type === "Feature Layer") {
+                //TODO...getting from the graphics is faster
+                // however...I can't tell when it's in a valid vs invalid state
+                //comes up more with many features in single service tests 
+                //if (lyr.layerObject.graphics.length > 0) {
+                //    node.innerHTML = this._checkCoincidence(ext, lyr.layerObject);
+                //} else {
+
+                var q = new Query();
+                q.geometry = ext;
+                q.returnGeometry = false;
+
+                var qt = new QueryTask(lyr.layerObject.url);
+                queries.push(qt.executeForIds(q));
+                updateNodes.push(node);
+              }
+            }
+          }
+        }
+      }
+
+      if (queries.length > 0) {
+        promises = all(queries);
+        promises.then(function (results) {
+          for (var i = 0; i < results.length; i++) {
+            updateNodes[i].innerHTML = results[i].length;
+          }
+        });
+      }
+    },
+
+    _checkCoincidence: function (ext, lyr) {
+      //test if the graphic intersects the extent
+      // this will only be done for poly or line feature collection layers
+      var featureCount = 0;
+      for (var i = 0; i < lyr.graphics.length; i++) {
+        featureCount += ext.intersects(lyr.graphics[i].geometry) ? 1 : 0;
+      }
+      return featureCount;
     }
   });
 });

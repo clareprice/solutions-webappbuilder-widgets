@@ -20,7 +20,11 @@
   </div>
   <hr />
   <div style="padding-top:20px;">
-    <div class="mainPanelPreviewContainer">
+      <div data-dojo-attach-point="div_chkStatic" style="padding-bottom:20px;">
+          <input data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="chkStatic" title="${nls.chkStatic}" data-dojo-attach-event="onChange:_chkStaticChanged" />
+          <span class="label">${nls.chkStatic}</span>
+      </div>
+      <div class="mainPanelPreviewContainer">
       <div data-dojo-attach-point="mainPanelPreviewButton" class="mainPanelPreviewButton">
         <div data-dojo-attach-event="onclick:uploadImage" class="jimu-btn">
           ${nls.uploadImage}
@@ -49,7 +53,9 @@
         </div>
       </div>
     </div>
-    <input type="file" 
+    
+      
+      <input type="file" 
            accept="image/png, image/jpeg, image/bmp, image/gif" 
            data-dojo-attach-point="fileInput" 
            style="opacity:0; width:0px; height:0px;">

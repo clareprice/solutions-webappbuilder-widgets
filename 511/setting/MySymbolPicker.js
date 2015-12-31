@@ -71,6 +71,7 @@ define(['dojo/_base/declare',
       symbolInfo: null,
       symbolType: "",
       map: null,
+      renderSymbols: [],
 
       // 1) Retain state is jacked up again after the layer symbol changes and the switch from halo/fill color define to fill symbol define
       // 2) Show all symbols when more than one is associated with the renderer..thinking I'll have all symbol things draw below the radio buttons..that way we have the full width and plenty of height o work with
@@ -88,6 +89,7 @@ define(['dojo/_base/declare',
         this.geometryType = options.layerInfo.geometryType;
         this.symbolInfo = options.symbolInfo;
         this.map = options.map;
+        this.ac = options.ac;
       },
 
       postCreate: function () {
@@ -144,7 +146,7 @@ define(['dojo/_base/declare',
               break;
             case 'CustomIcon':
               this.rdoCustomIcon.set('checked', true);
-              this.resetIcon(this.symbolInfo.icon.url);
+              this.resetIcon(this.layerInfo.imageData);
               break;
           }
 
@@ -176,9 +178,15 @@ define(['dojo/_base/declare',
       resetIcon: function (s) {
         this.customIconPlaceholder.innerHTML = "<div></div>";
 
+        //var a = domConstruct.create("div", {
+        //  class: "customPlaceholder",
+        //  innerHTML: ['<img class="customPlaceholder" src="', s, '"/>'].join(''),
+        //  title: this.nls.editCustomIcon
+        //});
+
         var a = domConstruct.create("div", {
           class: "customPlaceholder",
-          innerHTML: ['<img class="customPlaceholder" src="', s, '"/>'].join(''),
+          innerHTML: [s],
           title: this.nls.editCustomIcon
         });
 
@@ -227,18 +235,6 @@ define(['dojo/_base/declare',
 
       errorFunc: function (error) {
         console.log("Error: ", error.message);
-      },
-
-      _createImageDataDiv: function (sym, convert, node) {
-        var symbol = convert ? jsonUtils.fromJson(sym) : sym;
-        var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
-        var mySurface = gfx.createSurface(a, 26, 26);
-        var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
-        var shape = mySurface.createShape(descriptors.defaultShape)
-                      .setFill(descriptors.fill)
-                      .setStroke(descriptors.stroke);
-        shape.applyTransform({ dx: 13, dy: 13 });
-        return a;
       },
 
       _addEventHandlers: function (geoType) {
@@ -292,8 +288,8 @@ define(['dojo/_base/declare',
           icon = symbol;
         } else {
           if (this.customIconPlaceholder.children.length > 0) {
-            if (typeof (this.customIconPlaceholder.children[0].src) !== 'undefined') {
-              icon = new PictureMarkerSymbol(this.customIconPlaceholder.children[0].src, 13, 13);
+            if (typeof (this.customIconPlaceholder.innerHTML) !== 'undefined') {
+              icon = this.customIconPlaceholder.innerHTML;
             } else {
               icon = jsonUtils.fromJson(this.symbolInfo.icon);
             }
@@ -326,7 +322,10 @@ define(['dojo/_base/declare',
           clusteringEnabled: this.clusteringEnabled,
           icon: icon,
           clusterType: this.clusterType,
-          iconType: this.iconType
+          iconType: this.iconType,
+          renderSymbols: this.renderSymbols,
+          renderer: this.renderer,
+          s: this.customIconPlaceholder.children[0].src
         };
       },
 
@@ -410,7 +409,7 @@ define(['dojo/_base/declare',
 
       _loadLayerSymbol: function () {
 
-        //TODO check for MapServer renderer types other than just classBreaks and uniqueValues...also see if they would ever come back with a nonPMS symbol type
+        //TODO check for MapServer renderer types other than just classBreaks and uniqueValues..
 
         if (typeof (this.renderer) !== 'undefined') {
           var renderer = this.renderer;
@@ -428,50 +427,32 @@ define(['dojo/_base/declare',
         }
       },
 
+      //_createImageDataDiv: function (sym, convert, node) {
+      //  var symbol = convert ? jsonUtils.fromJson(sym) : sym;
+      //  var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
+      //  var mySurface = gfx.createSurface(a, 26, 26);
+      //  var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
+      //  var shape = mySurface.createShape(descriptors.defaultShape)
+      //                .setFill(descriptors.fill)
+      //                .setStroke(descriptors.stroke);
+      //  shape.applyTransform({ dx: 13, dy: 13 });
+      //  return a;
+      //},
+
       _createImageDataDiv: function (sym, convert, node) {
         var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
-
-         // if (sym.url) {
-
-         //   //TODO check if this is different for different server releases
-         //   //var symbolUrl = this.layerInfo.url + "/images/" + sym.url
-         //   //b = domConstruct.create("div", {
-         //   //  class: "customPlaceholder",
-         //   //  innerHTML: ['<img class="customPlaceholder" src="', symbolUrl, '"/>'].join(''),
-         //   //  title: "A"
-         //   //});
-         //   //a.appendChild(b);
-
-         //   var testSymbol = jsonUtils.fromJson(sym);
-         //   if (typeof (this.symbol) === 'undefined') {
-         //     symbol = new PictureMarkerSymbol(symbolUrl, 13, 13);
-         //     this.symbol = symbol;
-         //   }
-         // } else if (sym.type === 'esriSLS') {
-            
-         //   symbol = jsonUtils.fromJson(sym);
-         //   var mySurface = gfx.createSurface(a, 26, 26);
-         //   var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
-         //   var shape = mySurface.createShape(descriptors.defaultShape)
-         //                 .setFill(descriptors.fill)
-         //                 .setStroke(descriptors.stroke);
-         //   shape.applyTransform({ dx: 13, dy: 13 });
-         //   //symbol = new SimpleLineSymbol(sym.style, sym.color, sym.width);
-         // }
-         //else {
         var symbol = convert ? jsonUtils.fromJson(sym) : sym;
         if (!symbol) {
           symbol = sym;
         }
         this.symbol = symbol;
-          
-          var mySurface = gfx.createSurface(a, 26, 26);
-          var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
-          var shape = mySurface.createShape(descriptors.defaultShape)
-                        .setFill(descriptors.fill)
-                        .setStroke(descriptors.stroke);
-          shape.applyTransform({ dx: 13, dy: 13 });
-       // }
+        this.renderSymbols.push(this.symbol);
+        var mySurface = gfx.createSurface(a, 26, 26);
+        var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
+        var shape = mySurface.createShape(descriptors.defaultShape)
+                      .setFill(descriptors.fill)
+                      .setStroke(descriptors.stroke);
+        shape.applyTransform({ dx: 13, dy: 13 });
         return a;
       },
 
@@ -480,54 +461,24 @@ define(['dojo/_base/declare',
 
         for (var i = 0; i < infos.length; i++) {
           var sym = infos[i].symbol;
+          var symbol = jsonUtils.fromJson(sym);
+          if (!symbol) {
+            symbol = sym;
+          }
+          if (typeof (this.symbol) === 'undefined') {
+            this.symbol = symbol;
+          }
+          this.renderSymbols.push(symbol);
 
-          //if (symbol.url) {
-
-          //  var testSymbol = jsonUtils.fromJson(sym);
-          //  var mySurface = gfx.createSurface(a, 26, 26);
-          //  var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
-          //  var shape = mySurface.createShape(descriptors.defaultShape)
-          //                .setFill(descriptors.fill)
-          //                .setStroke(descriptors.stroke);
-          //  shape.applyTransform({ dx: 13, dy: 13 });
-
-          //  //TODO...I don't think this is necessary if we use symbol = jsonUtils.fromJson(symbol);
-
-
-          //    //TODO check if this is different for different server releases
-          //    var symbolUrl = this.layerInfo.url + "/images/" + symbol.url
-          //    //var s = "http://arcgis-gov-1244222493.us-west-2.elb.amazonaws.com/arcgis/rest/services/Transportation511/MapServer/4/images/7639cc5226ceff0eff9754047b189c64";
-          //    b = domConstruct.create("div", {
-          //      class: "customPlaceholder",
-          //      innerHTML: ['<img class="customPlaceholder" src="', symbolUrl, '"/>'].join(''),
-          //      title: "A"
-          //    });
-          //    a.appendChild(b);
-
-          //    if (typeof (this.symbol) === 'undefined') {
-          //      symbol = new PictureMarkerSymbol(symbolUrl, 13, 13);
-          //      this.symbol = symbol;
-          //    }
-          //} else {
-
-            var symbol = jsonUtils.fromJson(sym);
-            if (!symbol) {
-              symbol = sym;
-            }
-            if (typeof (this.symbol) === 'undefined') {
-              this.symbol = symbol;
-            }
-
-            var b = domConstruct.create("div", { class: "imageDataGFX imageDataGFX2" }, a);
-            var mySurface = gfx.createSurface(b, 26, 26);
-            var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
-            var shape = mySurface.createShape(descriptors.defaultShape)
-                          .setFill(descriptors.fill)
-                          .setStroke(descriptors.stroke);
-            shape.applyTransform({ dx: 13, dy: 13 });
-            a.insertBefore(b, a.firstChild);
-            a.appendChild(b);
-         // }
+          var b = domConstruct.create("div", { class: "imageDataGFX imageDataGFX2" }, a);
+          var mySurface = gfx.createSurface(b, 26, 26);
+          var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
+          var shape = mySurface.createShape(descriptors.defaultShape)
+                        .setFill(descriptors.fill)
+                        .setStroke(descriptors.stroke);
+          shape.applyTransform({ dx: 13, dy: 13 });
+          a.insertBefore(b, a.firstChild);
+          a.appendChild(b);
         }
         return a;
       },

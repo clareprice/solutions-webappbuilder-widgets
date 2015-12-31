@@ -223,6 +223,10 @@ define([
           this.refreshInterval.set('value', this.config.refreshInterval);
         }
 
+        if (this.config.loadStaticData) {
+          this.chkStatic.set('value', this.config.loadStaticData);
+        }
+
         this.layerTable.clear();
         for (var i = 0; i < this.config.layerInfos.length; i++) {
 
@@ -484,7 +488,8 @@ define([
           layerInfo: lo,
           value: selectLayersValue,
           symbolInfo: typeof (this.curRow.symbolData) !== 'undefined' ? this.curRow.symbolData : lo.symbolData,
-          map: this.map
+          map: this.map,
+          ac: this.appConfig
         };
         var sourceDijit = new SymbolPicker(options);
 
@@ -528,6 +533,7 @@ define([
         var a;
         //TODO...should I avoid hard coding these??
         if (symbol) {
+          var isSVG = false;
           if (typeof (symbol.setWidth) !== 'undefined') {
             if (typeof (symbol.setHeight) !== 'undefined') {
               symbol.setWidth(27);
@@ -535,19 +541,28 @@ define([
             } else {
               symbol.setWidth(2);
             }
-          } else {
+          } else if(typeof(symbol.size) !== 'undefined') {
             if (symbol.size > 20) {
               symbol.setSize(20);
             }
+          } else {
+            isSVG = true;
           }
-
-          a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
-          var mySurface = gfx.createSurface(a, 28, 28);
-          var descriptors = jsonUtils.getShapeDescriptors(symbol);
-          var shape = mySurface.createShape(descriptors.defaultShape)
-                        .setFill(descriptors.fill)
-                        .setStroke(descriptors.stroke);
-          shape.applyTransform({ dx: 14, dy: 14 });
+          if (isSVG) {
+            a = domConstruct.create("div", {
+              class: "imageDataGFX",
+              innerHTML: [symbol],
+              title: this.nls.iconColumnText
+            }, this.curRow.cells[3]);
+          } else {
+            a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
+            var mySurface = gfx.createSurface(a, 28, 28);
+            var descriptors = jsonUtils.getShapeDescriptors(symbol);
+            var shape = mySurface.createShape(descriptors.defaultShape)
+                          .setFill(descriptors.fill)
+                          .setStroke(descriptors.stroke);
+            shape.applyTransform({ dx: 14, dy: 14 });
+          }
         } else if (typeof (sym.url) !== 'undefined') {
           a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
           domStyle.set(a, "background-image", "url(" + sym.url + ")");
@@ -628,6 +643,10 @@ define([
         alert("Easy way for the user to get the script goes here");
       },
 
+      _chkStaticChanged: function (v) {
+        this.loadStaticData = v;
+      },
+
       getConfig: function () {
 
         if (query('.refreshOn', this.refreshOptions.domNode)[0]) {
@@ -678,6 +697,7 @@ define([
         this.config.mainPanelText = this.mainPanelText.value;
         this.config.mainPanelIcon = this.panelMainIcon.innerHTML;
         this.config.refreshInterval = this.refreshInterval.value;
+        this.config.loadStaticData = this.loadStaticData;
 
         this.config.refreshEnabled = this.refreshLayers.length > 0 ? true : false;
        

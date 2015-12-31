@@ -54,7 +54,11 @@ define([
       this.filter = options.filter;
       this.symbolData = options.symbolData;
       this.itemId = options.itemId;
-
+      this.renderSymbols = options.renderSymbols;
+      this.renderer = options.renderer;
+      this.imD = options.imD;
+      this.imD2 = options.imD2;
+      this.s = options.s;
       this._setupSymbols();
 
       /////////////////////////
@@ -86,10 +90,12 @@ define([
           if (typeof (this._parentLayer.originOperLayer.parentLayerInfo) !== 'undefined') {
             if (typeof (this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo) !== 'undefined') {
               var popupInfos = this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo.infoTemplates;
-              var url = this._parentLayerObject.url;
-              var index = url.substr(url.lastIndexOf('/') + 1);
-              if (popupInfos.hasOwnProperty(index)) {
-                this.infoTemplate = popupInfos[index].infoTemplate;
+              if (popupInfos) {
+                var url = this._parentLayerObject.url;
+                var index = url.substr(url.lastIndexOf('/') + 1);
+                if (popupInfos.hasOwnProperty(index)) {
+                  this.infoTemplate = popupInfos[index].infoTemplate;
+                }
               }
             }
           }
@@ -541,26 +547,64 @@ define([
                 if (this.symbolData.symbolType !== 'CustomSymbol') {
                   this.add(new Graphic(clusterGraphic.center, this.csym, attr));
                   this.add(new Graphic(clusterGraphic.center, this.csym3, attr));
+                  //this.add(new Graphic(clusterGraphic.center, new PictureMarkerSymbol(this.symbolData.s, 13, 13), attr));
                 } else {
                   this.add(new Graphic(clusterGraphic.center, this.csym, attr));
                   this.add(new Graphic(clusterGraphic.center, this.psym, attr));
+                  //this.add(new Graphic(clusterGraphic.center, new PictureMarkerSymbol(this.symbolData.s, 13, 13), attr));
                 }
               } else {
                 this.add(new Graphic(clusterGraphic.center, this.csym, attr));
                 this.add(new Graphic(clusterGraphic.center, this.psym, attr));
+                //this.add(new Graphic(clusterGraphic.center, new PictureMarkerSymbol(this.symbolData.s, 13, 13), attr));
               }
             } else {
+              ////TODO look to see if this could be consolidated further
+              //var pt = clusterGraphic.graphics[0].geometry;
+              //if (typeof (this.symbolData) !== 'undefined') {
+              //  if (this.symbolData.symbolType !== 'CustomSymbol') {
+              //    this.add(new Graphic(pt, this.csym2, attr));
+              //  } else {
+              //    this.add(new Graphic(pt, this.csym2, attr));
+              //    this.add(new Graphic(pt, this.psym2, attr));
+              //  }
+              //} else {
+              //  this.add(new Graphic(pt, this.csym2, attr));
+              //  this.add(new Graphic(pt, this.psym2, attr));
+              //}
+
+              //TODO look to see if this could be consolidated further
               var pt = clusterGraphic.graphics[0].geometry;
-              if (typeof (this.symbolData) !== 'undefined') {
-                if (this.symbolData.symbolType !== 'CustomSymbol') {
-                  this.add(new Graphic(pt, this.csym2, attr));
-                } else {
-                  this.add(new Graphic(pt, this.csym2, attr));
-                  this.add(new Graphic(pt, this.psym2, attr));
-                }
+              //if (typeof (this.symbolData) !== 'undefined') {
+              //  if (this.symbolData.symbolType !== 'CustomSymbol') {
+              //    this.add(new Graphic(pt, this.csym2, attr));
+              //  } else {
+              //    this.add(new Graphic(pt, this.csym2, attr));
+              //    this.add(new Graphic(pt, this.psym2, attr));
+              //  }
+              //} else {
+              //  this.add(new Graphic(pt, this.csym2, attr));
+              //  this.add(new Graphic(pt, this.psym2, attr));
+              //}
+              
+              //this.add(new Graphic(pt, jsonUtils.fromJson(this.firstRenderSymbol), attr));
+
+              //this.add(new Graphic(pt, this.csym2, attr));
+              ////this.add(new Graphic(pt, this.psym2, attr));
+              //this.add(new Graphic(pt, jsonUtils.fromJson(this.firstRenderSymbol), attr));
+              if (this.renderer.hasOwnProperty("getSymbol")) {
+                //TODO...this idea could be great to show the individuals with their actual symbol if this logic makes sense...
+               // this.add(new Graphic(pt, this.csym2, attr));
+                var ggg = new Graphic(pt, null, attr);
+                var symmmm = this.renderer.getSymbol(ggg);
+                ggg.setSymbol(symmmm);
+                this.add(ggg);
               } else {
-                this.add(new Graphic(pt, this.csym2, attr));
-                this.add(new Graphic(pt, this.psym2, attr));
+                //this.add(new Graphic(pt, this.csym2, attr));
+
+                //this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
+                this.add(new Graphic(pt, new PictureMarkerSymbol(this.renderer.symbol.imageData, this.renderer.symbol.width, this.renderer.symbol.height), attr));
+                //this.add(new Graphic(pt, jsonUtils.fromJson(this.renderer.symbol), attr));
               }
             }
           }
@@ -590,10 +634,16 @@ define([
         var cls = SimpleLineSymbol(style, fsp.outline.color, lineWidth);
 
         this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, fsp.color);
-        this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
+        //this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
+        var path = this.symbolData.s;
+        if(path.indexOf("${appPath}") > -1){
+          path = this.symbolData.s.replace("${appPath}", window.location.origin + window.location.pathname);
+        }
+
+        this.psym = new PictureMarkerSymbol(path, size - 11, size - 11);
 
         //options for cluster with 1
-        this.csym2 = jsonUtils.fromJson(this.mainSymbol);
+        this.csym2 = lang.clone(this.psym);
         this.csym3 = lang.clone(this.csym2);
         if (typeof (this.csym2.xoffset) !== 'undefined') {
           this.csym3.xoffset = 0;
@@ -605,10 +655,11 @@ define([
         //options for cluster with more than 1
         var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
         this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
-        this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
+        this.psym = new PictureMarkerSymbol(this.icon.url, size - 11, size - 11);
 
         //options for cluster with 1
-        this.psym2 = new PictureMarkerSymbol(this.icon, size2 - 13, size2 - 13);
+        this.psym2 = new PictureMarkerSymbol(this.icon.url, size2 - 13, size2 - 13);
+        //this.psym2 = jsonUtils.fromJson(this.renderer.symbol)
         var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
         this.csym2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size2, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
       }
@@ -616,7 +667,16 @@ define([
 
     _setupSymbols: function () {
       if (typeof (this.symbolData) !== 'undefined') {
-        this.mainSymbol = this.symbolData.symbol;
+        //this.mainSymbol = this.symbolData.symbol;
+        this.mainSymbol = this.icon;
+        //if (this.renderSymbols.length > 0) {
+        //  this.firstRenderSymbol = this.renderSymbols[this.renderSymbols.length -1];
+        //} else {
+        //  this.firstRenderSymbol = this.mainSymbol;
+        //}
+        if (this.renderer) {
+          this.firstRenderSymbol = this.renderer.symbol;
+        }
         this.backgroundClusterSymbol = this.symbolData.clusterSymbol;
       }
     },

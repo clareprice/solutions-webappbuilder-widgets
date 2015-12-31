@@ -42,7 +42,8 @@ define({
     rdoLayerIcon: "Use Symbol as Icon",
     rdoCustomIcon: "Upload Custom Icon",
     editCustomSymbol: "Edit Custom Symbol",
-    editCustomIcon: "Edit Custom Icon"
+    editCustomIcon: "Edit Custom Icon",
+    chkStatic: "Load Static data as new Feature Collection"
   },
   "ar": false,
   "cs": false,
