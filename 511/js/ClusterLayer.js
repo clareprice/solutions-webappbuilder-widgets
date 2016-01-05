@@ -55,7 +55,7 @@ define([
       this.symbolData = options.symbolData;
       this.itemId = options.itemId;
       this.renderSymbols = options.renderSymbols;
-      this.renderer = options.renderer;
+      this.renderer = options.renderer ? options.renderer : options.symbolData.renderer;
       this.imD = options.imD;
       this.imD2 = options.imD2;
       this.s = options.s;
@@ -592,19 +592,37 @@ define([
               //this.add(new Graphic(pt, this.csym2, attr));
               ////this.add(new Graphic(pt, this.psym2, attr));
               //this.add(new Graphic(pt, jsonUtils.fromJson(this.firstRenderSymbol), attr));
-              if (this.renderer.hasOwnProperty("getSymbol")) {
+              if (this.renderer.hasOwnProperty("getSymbol") && this.symbolData.symbolType === "LayerSymbol") {
                 //TODO...this idea could be great to show the individuals with their actual symbol if this logic makes sense...
                // this.add(new Graphic(pt, this.csym2, attr));
                 var ggg = new Graphic(pt, null, attr);
                 var symmmm = this.renderer.getSymbol(ggg);
                 ggg.setSymbol(symmmm);
                 this.add(ggg);
+              } else if (this.renderer.hasOwnProperty("symbol") && this.symbolData.symbolType === "LayerSymbol") {
+                this.add(new Graphic(pt, jsonUtils.fromJson(this.renderer.symbol), attr));
+              }else if (this.symbolData.symbolType === "EsriSymbol") {
+                this.add(new Graphic(pt, jsonUtils.fromJson(this.symbolData.symbol), attr));
+              } else if (this.symbolData.symbolType !== "LayerSymbol") {
+                this.add(new Graphic(pt, this.psym, attr));
               } else {
+
+                
+                  //this.add(new Graphic(pt, new PictureMarkerSymbol(this.renderer.symbol.imageData, this.renderer.symbol.width, this.renderer.symbol.height), attr));
+                  
+               
+                  //this.add(new Graphic(pt, new PictureMarkerSymbol(this.symbolData.s, 13, 13), attr));
+                  this.add(new Graphic(pt, this.psym, attr));
+                
                 //this.add(new Graphic(pt, this.csym2, attr));
 
                 //this.psym = new PictureMarkerSymbol(this.icon, size - 11, size - 11);
-                this.add(new Graphic(pt, new PictureMarkerSymbol(this.renderer.symbol.imageData, this.renderer.symbol.width, this.renderer.symbol.height), attr));
-                //this.add(new Graphic(pt, jsonUtils.fromJson(this.renderer.symbol), attr));
+                //this.add(new Graphic(pt, new PictureMarkerSymbol(this.renderer.symbol.imageData, this.renderer.symbol.width, this.renderer.symbol.height), attr));
+
+
+
+                
+               
               }
             }
           }
@@ -638,9 +656,25 @@ define([
         var path = this.symbolData.s;
         if(path.indexOf("${appPath}") > -1){
           path = this.symbolData.s.replace("${appPath}", window.location.origin + window.location.pathname);
+        } else if (this.symbolData.s) {
+          path = this.symbolData.s;
+        } else {
+          path = this.symbolData.icon.imageData;
         }
+        if (path && this.symbolData.iconType === "CustomIcon") {
+          //THIS WORKS UNLESS A CUSTOM ICON IS USED//
+          this.psym = new PictureMarkerSymbol(path, size - 11, size - 11);
+          //this.psym = jsonUtils.fromJson(this.symbolData.symbol);
 
-        this.psym = new PictureMarkerSymbol(path, size - 11, size - 11);
+          //this.psym = this.symbolData.symbol;
+        } else if (path && this.symbolData.iconType === "LayerIcon") {
+          this.psym = jsonUtils.fromJson(this.symbolData.symbol);
+        }else {
+          var ssssssss = SimpleLineSymbol(this.symbolData.icon.outline.style, this.symbolData.icon.outline.color, this.symbolData.icon.outline.width);
+          this.psym = new SimpleMarkerSymbol(this.symbolData.icon.style, this.symbolData.icon.size, ssssssss, this.symbolData.icon.color);
+          //this.psym = jsonUtils.fromJson(this.symbolData.icon);
+          //this.psym = this.symbolData.symbol;
+        }
 
         //options for cluster with 1
         this.csym2 = lang.clone(this.psym);

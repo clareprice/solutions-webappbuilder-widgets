@@ -315,6 +315,28 @@ define(['dojo/_base/declare',
           }
         }
 
+        //this.symbolInfo = {
+        //  symbolType: this.symbolType,
+        //  symbol: symbol,
+        //  clusterSymbol: this.clusterSymbol,
+        //  clusteringEnabled: this.clusteringEnabled,
+        //  icon: icon,
+        //  clusterType: this.clusterType,
+        //  iconType: this.iconType,
+        //  renderSymbols: this.renderSymbols,
+        //  renderer: this.renderer,
+        //  s: this.customIconPlaceholder.children[0].src
+        //};
+        var ssss;
+        if (this.customIconPlaceholder.children.length > 0) {
+          ssss = this.customIconPlaceholder.children[0].src;
+        } else if (this.layerSym.children.length > 0) {
+          ssss = this.layerSym.children[0].innerHTML;
+        }
+        else {
+          ssss = this.customIconPlaceholder.outerHTML;
+        }
+
         this.symbolInfo = {
           symbolType: this.symbolType,
           symbol: symbol,
@@ -325,7 +347,7 @@ define(['dojo/_base/declare',
           iconType: this.iconType,
           renderSymbols: this.renderSymbols,
           renderer: this.renderer,
-          s: this.customIconPlaceholder.children[0].src
+          s: ssss
         };
       },
 

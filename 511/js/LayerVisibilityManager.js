@@ -98,7 +98,12 @@ define(['dojo/_base/declare',
           var l = lyrs[key];
           if (typeof (l.pl) === 'undefined') {
             l.layerObject.setVisibility(auto ? false : l.visible);
-          } else {
+          }
+          //else if (l.pl.parentLayerInfo) {
+          //  //TODO this may not be necessary if I can get and add the correct LO to the layerList
+          //  l.pl.parentLayerInfo.layerObject.setVisibility(auto ? false : l.visible);
+          //}
+        else {
             l.layerObject.setVisibility(auto ? false : l.visible);
             l.pl.visibility = auto ? false : l.visible;
           }

@@ -17,13 +17,13 @@
 define(['jimu/BaseWidget', 'jimu/LayerInfos/LayerInfoFactory', 'jimu/LayerInfos/LayerInfos', 'jimu/utils',
     'dojo/dom', 'dojo/dom-class', 'dojo/dom-construct', 'dojo/on', 'dojo/dom-style', 'dojo/_base/declare', 'dojo/_base/xhr', 'dojo/_base/Color', 'dojo/_base/lang', 'dojo/_base/html', 'dojo/promise/all', 'dojo/topic', 'dojo/_base/array', 'dojo/DeferredList',
     'dijit/_WidgetsInTemplateMixin', "dijit/registry",
-    'esri/dijit/PopupTemplate', 'esri/graphic', 'esri/request', 'esri/geometry/Point', 'esri/layers/FeatureLayer', 'esri/tasks/query', 'esri/tasks/QueryTask', 'esri/dijit/Legend',
+    'esri/dijit/PopupTemplate', 'esri/graphic', 'esri/request', 'esri/geometry/Point', 'esri/layers/FeatureLayer', 'esri/tasks/query', 'esri/tasks/QueryTask', 'esri/dijit/Legend', "esri/arcgis/utils",
     './js/ClusterLayer', './js/DataLoader', './js/ThemeColorManager', './js/LayerVisibilityManager'
 ],
 function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     dom, domClass, domConstruct, on, domStyle, declare, xhr, Color, lang, html, all, topic, array, DeferredList,
     _WidgetsInTemplateMixin, registry,
-    PopupTemplate, Graphic, esriRequest, Point, FeatureLayer, Query, QueryTask, Legend,
+    PopupTemplate, Graphic, esriRequest, Point, FeatureLayer, Query, QueryTask, Legend, arcgisUtils,
     ClusterLayer, DataLoader, ThemeColorManager, LayerVisibilityManager
   ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin], {
@@ -47,6 +47,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     legendNodes: [],
     popupSelectionChanged: null,
     currentClusterLayer: null,
+    currentQueryList: [],
 
     //TODO...clear the refresh interval if clustering enabled has changed 
 
@@ -68,7 +69,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       this.loadStaticData = this.config.loadStaticData;
       //TODO...enable this when load static data into FC is unchecked
       if (!this.loadStaticData) {
-        this.own(on(this.map, "extent-change", lang.hitch(this, this._mapExtentChange)));
+        this.mapExtentChangedHandler = this.own(on(this.map, "extent-change", lang.hitch(this, this._mapExtentChange)));
         if (!this.loadStaticData) {
           this._mapExtentChange();
         }
@@ -77,6 +78,11 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
     onOpen: function () {
       this.widgetChange = false;
+
+      if (!this.mapExtentChangedHandler && !this.loadStaticData) {
+        this.mapExtentChangedHandler = this.own(on(this.map, "extent-change", lang.hitch(this, this._mapExtentChange)));
+          this._mapExtentChange();
+      }
 
       ////helps turn on/off layers when the widget is opened and closed
       this.layerVisibilityManager = new LayerVisibilityManager({
@@ -92,8 +98,6 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       if (this.config.refreshEnabled) {
         this.enableRefresh();
       }
-
-
 
       this.layerVisibilityManager.setLayerVisibility(this.layerList, false);
 
@@ -173,14 +177,110 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     refreshLayers: function () {
+      //TODO...need to create a current query list...to avoid duplicate queries to the same itemID for sub layers
+
+
       for (var key in this.layerList) {
         var lyr = this.layerList[key];
         if (lyr.type === "FeatureCollectionLayer") {
           lyr.dataLoader.refreshFeatures();
         } else if (lyr.type === "ClusterLayer") {
           lyr.layerObject.refreshFeatures();
+        } else if(lyr.li.itemId){
+          //TODO need to know if it's a FC...that is what we are expecting here
+          if (this.currentQueryList.indexOf(lyr.li.itemId) === -1) {
+            this.currentQueryList.push(lyr.li.itemId);
+
+            arcgisUtils.getItem(lyr.li.itemId).then(lang.hitch(this, function (response) {
+              var fcItemInfo = response.item;
+              var featureCollection = response.itemData;
+              var fcLayer;
+              featureCollectionLoop:
+              for (var i = 0; i < featureCollection.layers.length; i++) {
+                var fcl = featureCollection.layers[i];
+                layerListLoop:
+                for (var k in this.layerList) {
+                  if (this.layerList[k].pl.layerDefinition.name === fcl.layerDefinition.name) {
+                    lyr = this.layerList[k];
+                    break layerListLoop;
+                  }
+                }
+
+
+                //TODO this test needs to be updated for the Pre-generated
+                if (fcl.layerDefinition.name === lyr.pl.layerDefinition.name) {
+                  fcLayer = fcl;
+                  if (fcLayer) {
+                    var fs = fcLayer.featureSet.features;
+                    var shouldUpdate = true;
+                    if (fs.length < 10000) {
+                      shouldUpdate = JSON.stringify(this._features) !== JSON.stringify(fs);
+                    }
+
+                    if (shouldUpdate) {
+                      //if valid response then clear and load
+                      //this._features = [];
+
+                      //TODO...need to get the core layer here
+                      //TODO...may need a delete call here rather than just clear
+                      lyr.layerObject.clear();
+                      //TODO is this right or should I use the items SR
+                      var sr = this.map.spatialReference;
+
+                      for (var j = 0; j < fs.length; j++) {
+                        var graphicOptions = null;
+                        var item = fs[j];
+                        if (item.geometry) {
+                          //check li for renderer also
+                          var gra = new Graphic(this.getGraphicOptions(item, sr, lyr.layerObject.renderer));
+                          gra.setAttributes(item.attributes);
+                          if (this._infoTemplate) {
+                            gra.setInfoTemplate(this._infoTemplate);
+                          }
+
+                          //
+                          lyr.layerObject.add(gra);
+                          //this._features.push(item);
+                        } else {
+                          console.log("Null geometry skipped");
+                        }
+                      }
+                      this.countFeatures(lyr.layerObject, lyr.node);
+
+                      this.currentQueryList.splice(this.currentQueryList.indexOf(lyr.li.itemId), 1); 
+                    }
+                  }
+                }
+              }
+            }));
+          }
         }
       }
+    },
+
+    getGraphicOptions: function (item, sr, renderer) {
+      var graphicOptions;
+      if (typeof (item.geometry.rings) !== 'undefined') {
+        graphicOptions = {
+          geometry: {
+            rings: item.geometry.rings,
+            "spatialReference": { "wkid": sr.wkid }
+          }
+        }
+      } else if (typeof (item.geometry.paths) !== 'undefined') {
+        graphicOptions = {
+          geometry: {
+            paths: item.geometry.paths,
+            "spatialReference": { "wkid": sr.wkid }
+          }
+        }
+      } else {
+        graphicOptions = {
+          geometry: new Point(item.geometry.x, item.geometry.y, item.geometry.spatialReference),
+          symbol: renderer.symbol
+        }
+      }
+      return graphicOptions;
     },
 
     _initWidget: function () {
@@ -214,18 +314,13 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
       for (var i = 0; i < layerInfos.length; i++) {
         var lyrInfo = layerInfos[i];
-
-        //TODO need a way to remove the layer if it was previously referenced but is no longer referenced
-        //if (lyrInfo.use) {
         this._createLayerListItem(lyrInfo);
-        //} else{
-        //  this.removeMapLayer(lyrInfo.id);
-        //}
       }
       this.addMapLayers();
     },
 
     _createLayerListItem: function (lyrInfo) {
+
       for (var ii = 0; ii < this.opLayers.length; ii++) {
         var layer = this.opLayers[ii];
         var layerGeomType = "";
@@ -322,6 +417,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       //TODO...this is way to redundant
 
       var l = null;
+      var ll = null;
+      var id = null;
       if (geomType === "esriGeometryPoint") {
         if (lyr.layerType === "ArcGISFeatureLayer" || results) {
 
@@ -356,12 +453,19 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               dataLoader: dl
             };
           } else {
+            if (lyr.parentLayerInfo) {
+              if (lyr.parentLayerInfo.layerObject) {
+                ll = lyr.parentLayerInfo.layerObject;
+                id = ll.id;
+              }
+            }
             l = lyr.layerObject;
-            this.layerList[l.id] = {
-              type: l.type,
-              layerObject: l,
+            this.layerList[id ? id : l.id] = {
+              type: ll ? lyrType : l.type,
+              layerObject: ll ? ll : l,
               visible: true,
-              pl: lyr
+              pl: lyr,
+              li: lyrInfo
             };
           }
         } else if (lyr.layerType === "ArcGISStreamLayer") {
@@ -392,12 +496,20 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               dataLoader: dl
             };
           } else {
+            if (lyr.parentLayerInfo) {
+              if (lyr.parentLayerInfo.layerObject) {
+                ll = lyr.parentLayerInfo.layerObject;
+                id = ll.id;
+              }
+            }
             l = lyr.layerObject;
-            this.layerList[l.id] = {
-              type: l.type,
-              layerObject: l,
+            
+            this.layerList[id ? id : l.id] = {
+              type: ll ? lyrType : l.type,
+              layerObject: ll ? ll : l,
               visible: true,
-              pl: lyr
+              pl: lyr,
+              li: lyrInfo
             };
           }
 
@@ -413,16 +525,26 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           dataLoader: dl
         };
       } else {
+        if (lyr.parentLayerInfo) {
+          if (lyr.parentLayerInfo.layerObject) {
+            ll = lyr.parentLayerInfo.layerObject;
+            id = ll.id;
+          }
+        }
         l = lyr.layerObject;
-        this.layerList[l.id] = {
-          type: l.type,
-          layerObject: l,
+  
+        this.layerList[id ? id : l.id] = {
+          type: ll ? lyrType : l.type,
+          layerObject: ll ? ll : l,
           visible: true,
-          pl: lyr
+          pl: lyr,
+          li: lyrInfo
         };
       }
 
-      if (l) {
+      if (ll) {
+        this._addPanelItem(ll, lyrInfo);
+      } else if (l) {
         this._addPanelItem(l, lyrInfo);
       }
     },
@@ -814,6 +936,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }
 
       this.popupSelectionChanged = null;
+
+      this.mapExtentChangedHandler = null;
+
     },
 
     _clearChildNodes: function (parentNode) {
@@ -849,20 +974,15 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             if (lyr) {
               //Want to avoid this if a new FC is generated
               if (isFC) {
-                node.innerHTML = this._checkCoincidence(ext, lyr.layerObject);
+                //node.innerHTML = this._checkCoincidence(ext, lyr.layerObject);
+                this.countFeatures(lyr.layerObject, node);
               } else if (lyr.type === "Feature Layer") {
-                //TODO...getting from the graphics is faster
-                // however...I can't tell when it's in a valid vs invalid state
-                //comes up more with many features in single service tests 
-                //if (lyr.layerObject.graphics.length > 0) {
-                //    node.innerHTML = this._checkCoincidence(ext, lyr.layerObject);
-                //} else {
-
                 var q = new Query();
                 q.geometry = ext;
                 q.returnGeometry = false;
 
-                var qt = new QueryTask(lyr.layerObject.url);
+                //var qt = new QueryTask(lyr.layerObject.url);
+                var qt = new QueryTask(lyr.li.url);
                 queries.push(qt.executeForIds(q));
                 updateNodes.push(node);
               }
@@ -881,14 +1001,24 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }
     },
 
-    _checkCoincidence: function (ext, lyr) {
-      //test if the graphic intersects the extent
-      // this will only be done for poly or line feature collection layers
-      var featureCount = 0;
-      for (var i = 0; i < lyr.graphics.length; i++) {
-        featureCount += ext.intersects(lyr.graphics[i].geometry) ? 1 : 0;
-      }
-      return featureCount;
+    //_checkCoincidence: function (ext, lyr) {
+    //  //test if the graphic intersects the extent
+    //  // this will only be done for poly or line feature collection layers
+    //  var featureCount = 0;
+    //  for (var i = 0; i < lyr.graphics.length; i++) {
+    //    featureCount += ext.intersects(lyr.graphics[i].geometry) ? 1 : 0;
+    //  }
+    //  return featureCount;
+    //},
+
+    countFeatures: function (lyr, node) {
+      var q = new Query();
+      q.geometry = this.map.extent;
+      lyr.queryCount(q, lang.hitch(this, function (r) {
+        if (node) {
+          node.innerHTML = r;
+        }
+      }));
     }
   });
 });
