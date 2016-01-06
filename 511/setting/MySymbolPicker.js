@@ -90,6 +90,7 @@ define(['dojo/_base/declare',
         this.symbolInfo = options.symbolInfo;
         this.map = options.map;
         this.ac = options.ac;
+        this.layerId = options.value;
       },
 
       postCreate: function () {
@@ -108,6 +109,10 @@ define(['dojo/_base/declare',
       _initUI: function () {
         if (typeof (this.symbolInfo) !== 'undefined') {
           //set retained symbol properties
+          this.symbolType = this.symbolInfo.symbolType;
+          this.iconType = this.symbolInfo.iconType;
+          this.clusteringEnabled = this.symbolInfo.clusteringEnabled;
+          this.userDefinedSymbol = this.symbolInfo.userDefinedSymbol;
           switch (this.symbolInfo.symbolType) {
             case 'LayerSymbol':
               this.rdoLayerSym.set('checked', true);
@@ -115,12 +120,14 @@ define(['dojo/_base/declare',
               this._rdoCustomSymChanged(false);
               break;
             case 'EsriSymbol':
+              this.userDefinedSymbol = true;
               this.rdoEsriSym.set('checked', true);
               this._rdoLayerSymChanged(false);
               this._rdoCustomSymChanged(false);
               this.symbolPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.symbol));
               break;
             case 'CustomSymbol':
+              this.userDefinedSymbol = true;
               this.rdoCustomSym.set('checked', true);
               this._rdoEsriSymChanged(false);
               this._rdoLayerSymChanged(false);
@@ -133,18 +140,22 @@ define(['dojo/_base/declare',
           //set retained cluster options
           switch (this.symbolInfo.clusterType) {
             case 'ThemeCluster':
+              this.userDefinedSymbol = true;
               this.rdoThemeCluster.set('checked', true);
               break;
             case 'CustomCluster':
+              this.userDefinedSymbol = true;
               this.rdoCustomCluster.set('checked', true);
               break;
           }
+
 
           switch (this.symbolInfo.iconType) {
             case 'LayerIcon':
               this.rdoLayerIcon.set('checked', true);
               break;
             case 'CustomIcon':
+              this.userDefinedSymbol = true;
               this.rdoCustomIcon.set('checked', true);
               this.resetIcon(this.layerInfo.imageData);
               break;
@@ -153,6 +164,7 @@ define(['dojo/_base/declare',
           //set cluster options properties
           if (typeof (this.symbolInfo.clusterSymbol) !== 'undefined') {
             this.clusterPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.clusterSymbol));
+            this.userDefinedSymbol = true;
           }
           this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);
           this._chkClusterChanged(this.symbolInfo.clusteringEnabled);
@@ -161,10 +173,14 @@ define(['dojo/_base/declare',
           this.rdoLayerSym.set('checked', true);
           this._rdoEsriSymChanged(false);
           this._rdoCustomSymChanged(false);
-          this.chkClusterSym.set('checked', true);
+          this.chkClusterSym.set('checked', false);
           this.rdoCustomCluster.set('checked', true);
           this.rdoLayerIcon.set('checked', true);
           this._rdoCustomIconChanged(false);
+          this.symbolType = "LayerSymbol";
+          this.iconType = "LayerIcon"
+          this.clusteringEnabled = false;
+          this.userDefinedSymbol = false;
         }
 
         this._createIconPreviewDiv();
@@ -267,10 +283,11 @@ define(['dojo/_base/declare',
             symbol = this.symbol;
             break;
           case 'EsriSymbol':
+            this.userDefinedSymbol = true;
             symbol = this.symbolPicker.getSymbol();
             break;
           case 'CustomSymbol':
-
+            this.userDefinedSymbol = true;
             if (this.customSymbolPlaceholder.children.length > 0) {
               if (typeof (this.customSymbolPlaceholder.children[0].src) !== 'undefined') {
                 symbol = new PictureMarkerSymbol(this.customSymbolPlaceholder.children[0].src, 13, 13);
@@ -304,6 +321,7 @@ define(['dojo/_base/declare',
           } else {
             this.clusterSymbol = this.clusterPicker.getSymbol().toJson();
           }
+          this.userDefinedSymbol = true;
         } else {
           this.clusterSymbol = undefined;
           this.clusteringEnabled = false;
@@ -347,7 +365,9 @@ define(['dojo/_base/declare',
           iconType: this.iconType,
           renderSymbols: this.renderSymbols,
           renderer: this.renderer,
-          s: ssss
+          s: ssss,
+          userDefinedSymbol: this.userDefinedSymbol ? this.userDefinedSymbol : false,
+          layerId: this.layerId
         };
       },
 

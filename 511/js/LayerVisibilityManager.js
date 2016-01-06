@@ -78,6 +78,13 @@ define(['dojo/_base/declare',
                 };
               }
             }
+          } else if (layer.layers) {
+            this._initalLayerVisibility[layer.id] = {
+              type: layer.layerType,
+              layerObject: layer.layerObject,
+              visible: layer.layerObject.visible,
+              visibleSubLayers: layer.layerObject.visibleLayers
+            };       
           }
         }
       }));
@@ -93,20 +100,56 @@ define(['dojo/_base/declare',
       //if auto is true all layers will be marked as visible false
       //if auto is false all layers will set to the inital visibility captured onOpen
       // expectes the layers object to be {key: <LayerID>, values: { type: <LayerTypeString>, layerObject: <LayerInstance>, visible: <bool>}}
+      var alreadyChecked = [];
       if (lyrs) {
         for (var key in lyrs) {
           var l = lyrs[key];
+
+          if (!(alreadyChecked.indexOf(l.id) > -1)){
+          if (l.visibleSubLayers) {
+            l.layerObject.setVisibleLayers(l.visibleSubLayers);
+          } else 
           if (typeof (l.pl) === 'undefined') {
             l.layerObject.setVisibility(auto ? false : l.visible);
           }
-          //else if (l.pl.parentLayerInfo) {
-          //  //TODO this may not be necessary if I can get and add the correct LO to the layerList
-          //  l.pl.parentLayerInfo.layerObject.setVisibility(auto ? false : l.visible);
-          //}
-        else {
-            l.layerObject.setVisibility(auto ? false : l.visible);
-            l.pl.visibility = auto ? false : l.visible;
+            //else if (l.pl.parentLayerInfo) {
+            //  //TODO this may not be necessary if I can get and add the correct LO to the layerList
+            //  l.pl.parentLayerInfo.layerObject.setVisibility(auto ? false : l.visible);
+            //}
+          else {
+            if (l.layerObject.layerInfos){
+              if (l.layerObject.layerInfos.length > 0) {
+                var visLayers = [];
+                for (var k in lyrs) {
+                  var kk = lyrs[k];
+                  if (kk.li) {
+                    if (kk.li.subLayerId) {
+                      visLayers.push(kk.li.subLayerId);
+                    }
+                  }
+                }
+              }
+              if (!auto) {
+                if (visLayers) {
+                  l.layerObject.setVisibleLayers(visLayers);
+                }
+                l.layerObject.setVisibility(true);
+              } else {
+                //TODO this should only happen once for a mapservice layer
+                //need to update alreadyChecked in a way that would prevent it
+                var initalLayer = this._initalLayerVisibility[l.layerObject.id];
+                if(initalLayer.visibleSubLayers){
+                  l.layerObject.setVisibleLayers(initalLayer.visibleSubLayers);
+                  l.layerObject.setVisibility(true);
+                }
+              }
+            } else {
+
+              l.layerObject.setVisibility(auto ? false : l.visible);
+              l.pl.visibility = auto ? false : l.visible;
+            }
           }
+        }
         }
         //TODO need to understand how to make LayerList update
       }

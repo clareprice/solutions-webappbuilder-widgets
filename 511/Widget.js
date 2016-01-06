@@ -102,41 +102,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       this.layerVisibilityManager.setLayerVisibility(this.layerList, false);
 
       this.map.infoWindow.highlight = true;
-
-      //this.popupSelectionChanged = this.map.infoWindow.on("selection-change", lang.hitch(this, function () {
-      //  //var graphic = this.map.infoWindow.getSelectedFeature();
-      //  //if (this.map.infoWindow.selectedIndex > -1) {
-      //  //  this.map.infoWindow.select(this.map.infoWindow.selectedIndex);
-      //  //}
-      //  //if (graphic) {
-      //  //  if (graphic.hasOwnProperty('_graphicsLayer')) {
-      //  //    var l = graphic._graphicsLayer;
-      //  //    if (l.hasOwnProperty('_showSingles')) {
-      //  //      if (l._showSingles) {
-      //  //        this.currentClusterLayer = l;
-      //  //      }
-      //  //    }
-      //  //  } else {
-      //  //    this.currentClusterLayer.flashSingle(graphic);
-      //  //  }
-      //  //}
-      //}));
     },
-
-    //_popupSelectionChangedHandler: function(){
-    //  //need to find what layer this originated from and then call flashSingles
-    //  var graphic = this.map.infoWindow.getSelectedFeature();
-    //  if (graphic) {
-    //    if (graphic.hasOwnProperty('_graphicsLayer')) {
-    //      var l = graphic._graphicsLayer;
-    //      if (l.hasOwnProperty('_showSingles')) {
-    //        if (l._showSingles) {
-    //          l.flashSingles();
-    //        }
-    //      }
-    //    }
-    //  }
-    //},
 
     enableRefresh: function () {
       //set refreshItereval on all widget source layers that support it
@@ -146,7 +112,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         if (lyr.type !== "ClusterLayer" || lyr.type !== "FeatureCollectionLayer") {
           lyr = lyr.layerObject;
         } else {
-          var id = lyr.layerObject.id;
+          var id = lyr.li.id;
           var lenID = id.length;
           var sourceLayerID = id.replace(this.UNIQUE_APPEND_VAL_CL, "");
           if (lenID === sourceLayerID.length) {
@@ -178,8 +144,6 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
     refreshLayers: function () {
       //TODO...need to create a current query list...to avoid duplicate queries to the same itemID for sub layers
-
-
       for (var key in this.layerList) {
         var lyr = this.layerList[key];
         if (lyr.type === "FeatureCollectionLayer") {
@@ -421,7 +385,6 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       var id = null;
       if (geomType === "esriGeometryPoint") {
         if (lyr.layerType === "ArcGISFeatureLayer" || results) {
-
           //TODO...this part feels sloppy
           //TODO...look to see what all info could be captured as a part of settings
           //less work we have to do here the better
@@ -440,7 +403,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             this.layerList[l.id] = {
               type: "ClusterLayer",
               layerObject: l,
-              visible: true
+              visible: true,
+              id: l.id
             };
           } else if(!lyrInfo.refresh && this.loadStaticData){
             var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
@@ -456,11 +420,11 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             if (lyr.parentLayerInfo) {
               if (lyr.parentLayerInfo.layerObject) {
                 ll = lyr.parentLayerInfo.layerObject;
-                id = ll.id;
+                id = lyrInfo.id;
               }
             }
             l = lyr.layerObject;
-            this.layerList[id ? id : l.id] = {
+            this.layerList[id ? id : lyrInfo.id] = {
               type: ll ? lyrType : l.type,
               layerObject: ll ? ll : l,
               visible: true,
@@ -475,7 +439,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             type: "StreamLayer",
             layerObject: l,
             visible: true,
-            dataLoader: dl
+            dataLoader: dl,
+            id: l.id
           };
         } else {
           if (lyrInfo.symbolData.clusteringEnabled) {
@@ -483,7 +448,8 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             this.layerList[l.id] = {
               type: "ClusterLayer",
               layerObject: l,
-              visible: true
+              visible: true,
+              id: l.id
             };
           } else if (!lyrInfo.refresh && this.loadStaticData) {
             var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
@@ -499,12 +465,12 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             if (lyr.parentLayerInfo) {
               if (lyr.parentLayerInfo.layerObject) {
                 ll = lyr.parentLayerInfo.layerObject;
-                id = ll.id;
+                id = lyrInfo.id;
               }
             }
             l = lyr.layerObject;
             
-            this.layerList[id ? id : l.id] = {
+            this.layerList[id ? id : lyrInfo.id] = {
               type: ll ? lyrType : l.type,
               layerObject: ll ? ll : l,
               visible: true,
@@ -528,12 +494,12 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         if (lyr.parentLayerInfo) {
           if (lyr.parentLayerInfo.layerObject) {
             ll = lyr.parentLayerInfo.layerObject;
-            id = ll.id;
+            id = lyrInfo.id;
           }
         }
         l = lyr.layerObject;
   
-        this.layerList[id ? id : l.id] = {
+        this.layerList[id ? id : lyrInfo.id] = {
           type: ll ? lyrType : l.type,
           layerObject: ll ? ll : l,
           visible: true,
@@ -552,6 +518,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     _addPanelItem: function (layer, lyrInfo) {
       layer.setVisibility(true);
 
+      var id = lyrInfo.symbolData.clusteringEnabled ? layer.id : lyrInfo.id;
+      
+
       var rec = domConstruct.create("div", {
         class: "rec"
       }, this.pageMain);
@@ -559,7 +528,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       classNames += " active";
       var recIcon = domConstruct.create("div", {
         class: classNames,
-        id: "recIcon_" + layer.id,
+        id: "recIcon_" + id,
         innerHTML: lyrInfo.imageData
       }, rec);
       var recLabel = domConstruct.create("div", {
@@ -568,38 +537,38 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }, rec);
       var recNum = domConstruct.create("div", {
         class: "recNum",
-        id: "recNum_" + layer.id,
+        id: "recNum_" + id,
         innerHTML: ""
       }, rec);
 
-      var lyrType = this.layerList[layer.id].type;
+      var lyrType = this.layerList[id].type;
       if (lyrType === "FeatureCollectionLayer" || lyrType === "StreamLayer") {
-        this._addLegend(layer);
-        this.layerList[layer.id].dataLoader._node = recNum;
-        this.layerList[layer.id].dataLoader.countFeatures();
+        this._addLegend(layer, lyrInfo);
+        this.layerList[id].dataLoader._node = recNum;
+        this.layerList[id].dataLoader.countFeatures();
       } else if (lyrType === "ClusterLayer") {
-        this._addClusterLegend(layer, lyrInfo.imageData);
+        this._addClusterLegend(layer, lyrInfo.imageData, lyrInfo);
         layer.node = recNum;
         layer.clusterFeatures();
       } else {
-        this._addLegend(layer);
-        this.layerList[layer.id].node = recNum;
+        this._addLegend(layer, lyrInfo);
+        this.layerList[id].node = recNum;
       }
 
       //this._addLegend(layer)
 
-      on(recIcon, "click", lang.hitch(this, this._toggleLayer, layer));
-      on(rec, "click", lang.hitch(this, this._toggleLegend, layer));
+      on(recIcon, "click", lang.hitch(this, this._toggleLayer, this.layerList[id]));
+      on(rec, "click", lang.hitch(this, this._toggleLegend, this.layerList[id]));
 
       //on(rec, "right-click", lang.hitch(this, this._showMenu, layer));
     },
 
-    _addLegend: function (layer) {
+    _addLegend: function (layer, lyrInfo) {
       //TODO replace this with convert to SVG code
       // Think I'll write a dijit that outputs a collection tables...with the desc or whatever it's called and the SVG graphic
       // this way I'll have complete control on the layout...but also more code to manage
 
-      var component = registry.byId("legend_" + layer.id);
+      var component = registry.byId("legend_" + lyrInfo.id);
       if (component) {
         component.destroyRecursive();
         domConstruct.destroy(component);
@@ -607,28 +576,28 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
       var legendDiv = domConstruct.create("div", {
         class: "esriLegendLayer legendOff",
-        id: "legend_" + layer.id
+        id: "legend_" + lyrInfo.id
       }, this.pageMain);
 
       var symbolDiv2 = domConstruct.create("div", {
         class: "clusterSymbol2",
-        id: "legend_symbol2_" + layer.id,
+        id: "legend_symbol2_" + lyrInfo.id,
       }, legendDiv);
 
-      var legend = new Legend({
-        "autoUpdate": false,
-        "respectCurrentMapScale": true,
-        "layerInfos": [{
-          "defaultSymbol": false,
-          "layer": layer
-        }],
-        "map": this.map
-      }, symbolDiv2);
+      //var legend = new Legend({
+      //  "autoUpdate": false,
+      //  "respectCurrentMapScale": true,
+      //  "layerInfos": [{
+      //    "defaultSymbol": false,
+      //    "layer": layer
+      //  }],
+      //  "map": this.map
+      //}, symbolDiv2);
 
       //legend.startup();
     },
 
-    _addClusterLegend: function (layer, img) {
+    _addClusterLegend: function (layer, img, lyrInfo) {
       var legendDiv = domConstruct.create("div", {
         class: "esriLegendLayer legendOff",
         id: "legend_" + layer.id
@@ -646,7 +615,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
       }, symbolDiv2);
 
 
-      this.legendNodes.push({ node: symbolDiv, styleProp: "background-color" });
+      //this.legendNodes.push({ node: symbolDiv, styleProp: "background-color" });
     },
 
     _getClusterLayer: function (lyrInfo, lyr, lyrType, results, infoTemplate) {
@@ -690,11 +659,16 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           features = [];
           for (var i = 0; i < lyr.graphics.length; i++) {
             var g = lyr.graphics[i];
-            features.push({
-              geometry: new Point(g.geometry.x, g.geometry.y, g.geometry.spatialReference),
-              attributes: g.attributes
-            });
-            //features.push(g);
+            if (g.geometry) {
+              if (g.geometry.x) {
+                features.push({
+                  geometry: new Point(g.geometry.x, g.geometry.y, g.geometry.spatialReference),
+                  attributes: g.attributes
+                });
+              } else {
+                features.push(g);
+              }
+            }
           }
         }
         //change this to pretty much just pass the layerInfo...layerInfo should contain all the other stuff that we 
@@ -821,37 +795,75 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
     _toggleLayer: function (obj) {
       this.map.infoWindow.hide();
-      var id = obj.id;
-      var lyr = this.layerList[obj.id];
-      if (domClass.contains("recIcon_" + id, "active")) {
-        domClass.remove("recIcon_" + id, "active");
-        if (lyr) {
-          lyr.layerObject.setVisibility(false);
-          this.layerList[obj.id].visible = false;
-          if (typeof (lyr.pl) !== 'undefined') {
-            lyr.pl.visibility = false;
-            if (this.map.graphicsLayerIds.indexOf(obj.id) > -1) {
-              var l = this.map.getLayer(obj.id);
-              l.setVisibility(false);
-            }
+
+      var id = obj.id ? obj.id : obj.layerObject.id;
+      if (obj.pl) {
+        id = obj.pl.id;
+      }
+      
+      var lyr = this.layerList[id];
+
+      if (!lyr) {
+        if (obj.li) {
+          id = obj.li.id;
+        }
+        lyr = this.layerList[id];
+      }
+
+
+      
+      if (lyr) {
+
+        var hasSubLayerId = false;
+        if (lyr.li) {
+          if (lyr.li.hasOwnProperty("subLayerId")) {
+            hasSubLayerId = typeof (lyr.li.subLayerId) !== 'undefined';
           }
         }
-      } else {
-        domClass.add("recIcon_" + id, "active");
-        if (lyr) {
-          lyr.layerObject.setVisibility(true);
-          if (lyr.type === 'ClusterLayer') {
-            //TODO still need to wrok on that
-            lyr.layerObject.flashFeatures();
-          } else if (lyr.type === 'FeatureCollectionLayer') {
-            lyr.dataLoader.flashFeatures();
+
+        if (domClass.contains("recIcon_" + id, "active")) {
+          domClass.remove("recIcon_" + id, "active");
+          if (hasSubLayerId) {
+            var visLayers = lyr.layerObject.visibleLayers;
+            var lyrIndex = visLayers.indexOf(lyr.li.subLayerId);
+            if (lyrIndex > -1) {
+              visLayers.splice(lyrIndex, 1);
+            }
+            lyr.layerObject.setVisibleLayers(visLayers);
+            lyr.layerObject.setVisibility(true);
+          } else if (lyr) {
+            lyr.layerObject.setVisibility(false);
+            this.layerList[obj.id].visible = false;
+            if (typeof (lyr.pl) !== 'undefined') {
+              lyr.pl.visibility = false;
+              if (this.map.graphicsLayerIds.indexOf(obj.id) > -1) {
+                var l = this.map.getLayer(obj.id);
+                l.setVisibility(false);
+              }
+            }
           }
-          this.layerList[obj.id].visible = true;
-          if (typeof (lyr.pl) !== 'undefined') {
-            lyr.pl.visibility = true;
-            if (this.map.graphicsLayerIds.indexOf(obj.id) > -1) {
-              var l = this.map.getLayer(obj.id);
-              l.setVisibility(true);
+        } else {
+          domClass.add("recIcon_" + id, "active");
+          if (hasSubLayerId) {
+            var visLayers = lyr.layerObject.visibleLayers;
+            visLayers.push(lyr.li.subLayerId);
+            lyr.layerObject.setVisibleLayers(visLayers);
+            lyr.layerObject.setVisibility(true);
+          } else if (lyr) {
+            lyr.layerObject.setVisibility(true);
+            if (lyr.type === 'ClusterLayer') {
+              //TODO still need to wrok on that
+              lyr.layerObject.flashFeatures();
+            } else if (lyr.type === 'FeatureCollectionLayer') {
+              lyr.dataLoader.flashFeatures();
+            }
+            this.layerList[obj.id].visible = true;
+            if (typeof (lyr.pl) !== 'undefined') {
+              lyr.pl.visibility = true;
+              if (this.map.graphicsLayerIds.indexOf(obj.id) > -1) {
+                var l = this.map.getLayer(obj.id);
+                l.setVisibility(true);
+              }
             }
           }
         }
@@ -960,7 +972,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
             console.log("A");
           } else {
 
-            var node = dom.byId("recNum_" + lyr.layerObject.id);
+            var node = dom.byId("recNum_" + lyr.li.id);
             var ext = this.map.extent;
 
             //TODO expand this to account for subLayers in FC if not already doing so
@@ -995,7 +1007,9 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         promises = all(queries);
         promises.then(function (results) {
           for (var i = 0; i < results.length; i++) {
-            updateNodes[i].innerHTML = results[i].length;
+            if (results[i]) {
+              updateNodes[i].innerHTML = results[i].length;
+            }
           }
         });
       }

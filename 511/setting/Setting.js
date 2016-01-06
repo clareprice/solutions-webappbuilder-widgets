@@ -243,6 +243,7 @@ define([
           this._addLabelOption(tr);
           this._addRefreshOption(tr);
           this._addFilterOption(tr);
+          this._addDefaultSymbol(tr);
         }
       },
 
@@ -287,6 +288,15 @@ define([
           tabLayers.startup();
           tr.selectLayers = tabLayers;
           this.own(on(tabLayers, 'change', lang.hitch(this, function (v) {
+            //alert("tlChange");
+            var lo = this._getLayerOptionByValue(td.children[0].textContent);
+
+            //TODO check the lo.symbolData.userDefinedSymbol
+
+            //TODO...need to be able to understand if the symbol change is valid
+            this._addDefaultSymbol(tr);
+
+
             //TODO...could keep track of value change
             // TODO...could also clear the label box here...still thinking if that is appropriate
           })));
@@ -370,6 +380,48 @@ define([
           var lo = this._getLayerOptionByValue(m.children[0].textContent);
           this._showFilter(lo.url);
         }, tr));
+      },
+
+      _addDefaultSymbol: function (tr) {
+        var td = query('.simple-table-cell', tr)[0];
+        this.curRow = tr;
+        if (td) {
+          //TODO need to get the layer and get the first symbol from the renderer
+          var lo = this._getLayerOptionByValue(td.children[0].textContent);
+          var selectLayersValue = tr.selectLayers.value;
+
+          var hasSymbolData = false;
+          var sd;
+          if (typeof (this.curRow.symbolData) !== 'undefined') {
+            sd = this.curRow.symbolData;
+            hasSymbolData = sd.userDefinedSymbol && (sd.layerId === selectLayersValue);
+          }
+
+          var options = {
+            nls: this.nls,
+            callerRow: tr,
+            layerInfo: lo,
+            value: selectLayersValue,
+            symbolInfo: hasSymbolData ? this.curRow.symbolData : lo.symbolData,
+            map: this.map,
+            ac: this.appConfig
+          };
+          var sourceDijit = new SymbolPicker(options);
+          sourceDijit._setSymbol();
+
+          ////TODO may need to call methods here to full hydrate stuff
+          this.curRow.cells[3].innerHTML = "<div></div>";
+          this.curRow.symbolData = sourceDijit.symbolInfo;
+
+          var newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
+          var r = this.layerTable.editRow(this.curRow, {
+            imageData: newDiv.innerHTML
+          });
+
+          this.curRow = null;
+          sourceDijit.destroy();
+          sourceDijit = null;
+        }
       },
 
       _getLayerOptionByValue: function (value) {
@@ -456,9 +508,12 @@ define([
             }
 
             var u;
+            var subLayerId;
             if (Node.layerObject) {
               if (Node.layerObject.url) {
                 u = Node.layerObject.url;
+                //TODO should first test if int
+                subLayerId = parseInt(u.substr(u.lastIndexOf('/') + 1));
               }
             }
 
@@ -471,7 +526,8 @@ define([
               type: Node.type,
               itemId: OpLyr2 ? OpLyr2.itemId : undefined,
               renderer: Node.layerObject.renderer,
-              geometryType: Node.layerObject.geometryType
+              geometryType: Node.layerObject.geometryType,
+              subLayerId: subLayerId
             });
           }
         }));
@@ -648,7 +704,6 @@ define([
       },
 
       getConfig: function () {
-
         if (query('.refreshOn', this.refreshOptions.domNode)[0]) {
           if (!this.refreshInterval.value) {
             new Message({
@@ -685,7 +740,8 @@ define([
             renderer: lo.renderer,
             drawingInfo: lo.drawingInfo,
             fields: lo.fields,
-            oidFieldName: lo.oidFieldName
+            oidFieldName: lo.oidFieldName,
+            subLayerId: lo.subLayerId
           };
 
           var td = query('.imageDataGFX', tr)[0];
@@ -698,14 +754,7 @@ define([
         this.config.mainPanelIcon = this.panelMainIcon.innerHTML;
         this.config.refreshInterval = this.refreshInterval.value;
         this.config.loadStaticData = this.loadStaticData;
-
         this.config.refreshEnabled = this.refreshLayers.length > 0 ? true : false;
-       
-        //TODO test running the queries here
-        //still thinking through this...but if I grabbed the features here then on open it would just be a matter
-        // of loading the appropriate map layer...this would definately minimize the load time
-        // but it would also be writing a static copy of the data to the config...not sure if that is a bad idea or not
-        //
 
         return this.config;
       },

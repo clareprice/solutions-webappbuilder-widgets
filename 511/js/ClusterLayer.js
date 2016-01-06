@@ -417,7 +417,7 @@ define([
           var g = graphics[i];
           if (x % 2) {
             var s = g.symbol;
-            if (typeof (s) !== 'undefined') {
+            if (s) {
               if (typeof (s.setOutline) === 'function') {
                 s.setOutline(cls)
               }
@@ -425,7 +425,7 @@ define([
             }
           } else {
             var s = g.symbol;
-            if (typeof (s) !== 'undefined') {
+            if (s) {
               if (typeof (s.setOutline) === 'function') {
                 s.setOutline(cls2)
               }
