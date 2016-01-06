@@ -166,8 +166,10 @@ define(['dojo/_base/declare',
           }
 
           //set cluster options properties
-          if (typeof (this.symbolInfo.clusterSymbol) !== 'undefined') {
-            this.clusterPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.clusterSymbol));
+          if (typeof (this.symbolInfo.clusterType) !== 'undefined') {
+            if (this.symbolInfo.clusterType === "CustomCluster") {
+              this.clusterPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.clusterSymbol));
+            }
             this.userDefinedSymbol = true;
           }
           this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);

@@ -910,11 +910,19 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         this.appConfig.theme.name === "LaunchpadTheme") {
         this.inherited(arguments);
       } else {
+        //var pos = {
+        //  right: "0px",
+        //  top: "0px",
+        //  width: "220px", //if this is commented out and 
+        //  bottom: "0px",
+        //  'z-index': "auto"
+        //};
         var pos = {
           right: "0px",
-          top: "0px",
-          width: "50px",
-          bottom: "0px"
+          bottom: "0px",
+
+          height: "none",
+          'z-index': "auto"
         };
         this.position = pos;
         var style = utils.getPositionStyle(this.position);

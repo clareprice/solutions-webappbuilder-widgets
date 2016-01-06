@@ -1,5 +1,5 @@
 .jimu-widget-511{
-  width: 100%;
+  width: 220px;
   height: 100%;
 }
 
@@ -596,7 +596,7 @@ html, body {
 
 /* MEDIA SPECIFIC: SMALL TABLETS */
 
-@media only screen and (max-width: 800px) {
+@media only screen and (max-width: 750px) {
 	
 	/*.esriSimpleSlider {
 		display: none;
@@ -606,19 +606,9 @@ html, body {
 		left: 10px;
 	}*/
 	
-	#panelLogo {
+	/*#panelLogo {
 		display: none;
-	}
-	 
-}
-
-/* MEDIA SPECIFIC: PHONES */
-
-@media only screen and (max-width: 470px) {
-	
-	.esriSimpleSlider {
-		display: none;
-	}
+	}*/
 	
 	#panelTop {
 		left: 10px;
@@ -628,25 +618,8 @@ html, body {
 		display: none;
 	}
 	
-	.panelContent {
-		position: absolute;
-		right: 0px;
-		bottom: 0px;
-		/*width: 100%;*/
-      
-		height: 100%;
-	}
-	
-	.page {
-		position: relative;
-		width: 100%;
-		height: 100%;
-		display: block;
-		background-color: rgba(0,0,0,0.15);
-	}
-
 	.pageContent {
-		top: 60px;
+		/*top: 60px;*/
 	}
 	
 	.pageHeader {
@@ -709,7 +682,120 @@ html, body {
 		text-align: center;
 		padding: 0px;
 		overflow-x: hidden;
-		overflow-y: scroll;
+		overflow-y:auto;
+	}
+	
+	#panelPopup {
+		position: fixed !important;
+		left: 500px ! important;
+		top: 700px ! important;
+	}
+	 
+}
+
+/* MEDIA SPECIFIC: PHONES */
+
+@media only screen and (max-width: 470px) {
+
+    .jimu-widget-511{
+        width: 100% !important;
+        height: 40%;
+    }
+	
+	.esriSimpleSlider {
+		display: none;
+	}
+	
+	#panelTop {
+		left: 10px;
+	}
+	
+	#panelLogo {
+		display: none;
+	}
+	
+	.panelContent {
+		position: absolute;
+		right: 0px;
+		bottom: 0px;
+		width: 100%;
+		/*height: 40%;*/
+        /*top: 30%;*/
+	}
+	
+	.page {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		display: block;
+		background-color: rgba(0,0,0,0.15);
+	}
+
+	.pageContent {
+		/*top: 60px;*/
+	}
+	
+	.pageHeader {
+		position: relative;
+		width: 100%;
+		height: 30px;
+		text-align: center;
+		display: block;
+	}
+	
+	.pageTitle {
+		position: absolute;
+		left: 10px;
+		right: 30px;
+		width: auto;
+		/*top: 35px;*/
+		height: 20px;
+		font-size: 11px;
+		color: #ffffff;
+		line-height: 20px;
+		overflow: hidden;
+		text-align: left;
+	}
+		
+	.pageCounter {
+        display: none;
+		position: absolute;
+		left: 5px;
+		margin-left: 0px;
+		top: 5px;
+		width: 70px;
+		font-size: 40px;
+		height: 70px;
+		line-height: 70px;
+		font-family: Steelfish;
+		border: 5px solid rgba(0,0,0,1);
+		-moz-border-radius: 40px;
+		-webkit-border-radius: 40px;
+		border-radius: 40px;
+		opacity:0.3;
+		filter:alpha(opacity=30);
+	}
+	
+	.pageIcon {
+		position: absolute;
+		left: 10px;
+		top: 10px;
+		width: 50px;
+		height: 50px;
+	}
+	
+	.pageBody {
+		position: absolute;
+		top: 30px;
+		bottom: 0px;
+		width: 100%;
+		display: block;
+		color: #000000;
+		font-size: 10px;
+		text-align: center;
+		padding: 0px;
+		overflow-x: hidden;
+		overflow-y:auto;
 	}
 	
 	#panelPopup {

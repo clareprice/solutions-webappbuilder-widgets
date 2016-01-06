@@ -34,6 +34,7 @@ define([
     'jimu/dijit/Filter',
     'jimu/dijit/Popup',
     'jimu/dijit/Message',
+    'jimu/utils',
     'jimu/dijit/_FeaturelayerServiceChooserContent',
     'esri/request',
     'esri/symbols/jsonUtils',
@@ -72,6 +73,7 @@ define([
     Filter,
     Popup,
     Message,
+    utils,
     _FeaturelayerServiceChooserContent,
     esriRequest,
     jsonUtils,
@@ -698,13 +700,14 @@ define([
         array.forEach(rows, lang.hitch(this, function (tr) {
           var selectLayersValue = tr.selectLayers.value;
 
-          var labelText = tr.labelText;
+          var labelTextValue = utils.sanitizeHTML(tr.labelText.value);
           var refreshBox = tr.refreshBox;
           var lo = this._getLayerOptionByValue(selectLayersValue);
+    
 
           lInfo = {
             layer: selectLayersValue,
-            label: labelText.value !== "" ? labelText.value : selectLayersValue,
+            label: labelTextValue !== "" ? labelTextValue : selectLayersValue,
             refresh: refreshBox.checked,
             filter: lo.filter,
             url: lo.url,
@@ -726,9 +729,9 @@ define([
         }));
 
         this.config.layerInfos = table;
-        this.config.mainPanelText = this.mainPanelText.value;
+        this.config.mainPanelText = utils.sanitizeHTML(this.mainPanelText.value);
         this.config.mainPanelIcon = this.panelMainIcon.innerHTML;
-        this.config.refreshInterval = this.refreshInterval.value;
+        this.config.refreshInterval = utils.sanitizeHTML(this.refreshInterval.value);
         this.config.loadStaticData = this.loadStaticData;
         this.config.refreshEnabled = this.refreshLayers.length > 0 ? true : false;
 
