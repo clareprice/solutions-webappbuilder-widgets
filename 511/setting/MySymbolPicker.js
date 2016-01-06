@@ -157,7 +157,11 @@ define(['dojo/_base/declare',
             case 'CustomIcon':
               this.userDefinedSymbol = true;
               this.rdoCustomIcon.set('checked', true);
-              this.resetIcon(this.layerInfo.imageData);
+
+              if (this.symbolInfo.icon) {
+                //this.resetIcon(this.layerInfo.imageData);
+                this.resetIcon(this.symbolInfo.icon);
+              }
               break;
           }
 

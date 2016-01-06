@@ -288,16 +288,7 @@ define([
           tabLayers.startup();
           tr.selectLayers = tabLayers;
           this.own(on(tabLayers, 'change', lang.hitch(this, function (v) {
-            //alert("tlChange");
-            var lo = this._getLayerOptionByValue(td.children[0].textContent);
-
-            //TODO check the lo.symbolData.userDefinedSymbol
-
-            //TODO...need to be able to understand if the symbol change is valid
             this._addDefaultSymbol(tr);
-
-
-            //TODO...could keep track of value change
             // TODO...could also clear the label box here...still thinking if that is appropriate
           })));
         }
@@ -320,32 +311,18 @@ define([
       _addRefreshOption: function (tr) {
         var td = query('.simple-table-cell', tr)[5];
         html.setStyle(td, "verticalAlign", "middle");
+        this.currentTR = tr;
         var refreshCheckBox = new CheckBox({
-          //style: {
-          //  "padding-left": "10px"
-          //},
           onChange: lang.hitch(this, function (v) {
-            //TODO has to be a better way to do this
-            // just need to know the row the hosts the cbx so we can get the layer value and
-            //The other thought would be to do the type check while first adding the row
-            //Then here we'd just need to check if this row has a url...if not then do the popup
-            //that may be better....
-            var ae = this.domNode.ownerDocument.activeElement;
-            var value = ae.parentNode.parentNode.parentNode.selectLayers.value;
-
+            var value = this.currentTR.selectLayers.value;
             if (v) {
               var lyrInfo = this._getLayerOptionByValue(value);
-              //if (typeof (lyrInfo.url) !== 'undefined' && lyrInfo.url !== '') {
                 this.refreshLayers.push(value);
                 var rO = query('.refreshOff', this.refreshOptions.domNode)[0];
                 if (rO) {
                   html.removeClass(rO, 'refreshOff');
                   html.addClass(rO, 'refreshOn');
                 }
-              //} else {
-                //this.activeLayerInfo = lyrInfo;
-                //this._onSetUrlClick();
-              //}
             } else {
               var i = this.refreshLayers.indexOf(value);
               if (i > -1) {
@@ -409,7 +386,6 @@ define([
           var sourceDijit = new SymbolPicker(options);
           sourceDijit._setSymbol();
 
-          ////TODO may need to call methods here to full hydrate stuff
           this.curRow.cells[3].innerHTML = "<div></div>";
           this.curRow.symbolData = sourceDijit.symbolInfo;
 

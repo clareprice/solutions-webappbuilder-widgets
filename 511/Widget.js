@@ -163,13 +163,14 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               for (var i = 0; i < featureCollection.layers.length; i++) {
                 var fcl = featureCollection.layers[i];
                 layerListLoop:
-                for (var k in this.layerList) {
-                  if (this.layerList[k].pl.layerDefinition.name === fcl.layerDefinition.name) {
-                    lyr = this.layerList[k];
-                    break layerListLoop;
-                  }
+                  for (var k in this.layerList) {
+                    if (this.layerList[k].pl) {
+                      if (this.layerList[k].pl.layerDefinition.name === fcl.layerDefinition.name) {
+                        lyr = this.layerList[k];
+                        break layerListLoop;
+                      }
+                    }
                 }
-
 
                 //TODO this test needs to be updated for the Pre-generated
                 if (fcl.layerDefinition.name === lyr.pl.layerDefinition.name) {
