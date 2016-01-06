@@ -44,7 +44,8 @@ define({
     rdoCustomIcon: "Upload Custom Icon",
     editCustomSymbol: "Edit Custom Symbol",
     editCustomIcon: "Edit Custom Icon",
-    chkStatic: "Load Static data as new Feature Collection"
+    chkStatic: "Load Static data as new Feature Collection",
+    missingRefreshValue: "Please provide a refresh interval value."
   },
   "ar": false,
   "cs": false,

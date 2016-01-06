@@ -49,6 +49,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     currentClusterLayer: null,
     currentQueryList: [],
 
+
     //TODO...clear the refresh interval if clustering enabled has changed 
 
 
@@ -906,17 +907,59 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     setPosition: function (position, containerNode) {
-      if (this.appConfig.theme.name === "BoxTheme" || this.appConfig.theme.name === "DartTheme" ||
-        this.appConfig.theme.name === "LaunchpadTheme") {
+      //TODO still need to investigate how to fully fit into the Box, Dart, and Launchpad themes
+      //This would still allow the widget to function somewhat but not fully
+      if (this.appConfig.theme.name === "BoxTheme"){
         this.inherited(arguments);
-      } else {
+        var pos = {
+          right: "0px",
+          bottom: "0px",
+          top: "0px",
+          height: "auto",
+          'z-index': "auto"
+        };
+        this.position = pos;
+        var style = utils.getPositionStyle(this.position);
+        style.position = 'absolute';
+        containerNode = this.map.id;
+        html.place(this.domNode, containerNode);
+        html.setStyle(this.domNode, style);
+        
+        domStyle.set(this.pageContent, "bottom", "60px");
+      }else if( this.appConfig.theme.name === "DartTheme"){
+        this.inherited(arguments);
+        var pos = {
+          right: "0px",
+          bottom: "80px",
+          top: "0px",
+          height: "auto",
+          'z-index': "auto"
+        };
+        this.position = pos;
+        var style = utils.getPositionStyle(this.position);
+        style.position = 'absolute';
+        containerNode = this.map.id;
+        html.place(this.domNode, containerNode);
+        html.setStyle(this.domNode, style);
+      }else if(this.appConfig.theme.name === "LaunchpadTheme") {
+        this.inherited(arguments);
         //var pos = {
-        //  right: "0px",
-        //  top: "0px",
-        //  width: "220px", //if this is commented out and 
+        //  left: "0px",
         //  bottom: "0px",
-        //  'z-index': "auto"
+        //  top: "0px",
+        //  height: "auto",
+        //  'z-index': "1"
         //};
+        //this.position = pos;
+        //var style = utils.getPositionStyle(this.position);
+        //style.position = 'absolute';
+        //containerNode = this.map.id;
+        //html.place(this.domNode, containerNode);
+        //html.setStyle(this.domNode, style);
+
+        //domStyle.set(this.pageContent, "bottom", "120px");
+        //domStyle.set(this.pageContent, "top", "80px");
+      } else {
         var pos = {
           right: "0px",
           bottom: "0px",

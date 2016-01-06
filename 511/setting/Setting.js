@@ -101,6 +101,7 @@ define([
       refreshLayers: [],
       geomTypeResults: [],
       hasUpdatedInfo: false,
+      hasError: false,
 
       // 2) Add cluster SVG or other sumbol props beside the icon in the settings table
       // 3) Finish the remove of the second download script button
@@ -325,6 +326,9 @@ define([
                   html.removeClass(rO, 'refreshOff');
                   html.addClass(rO, 'refreshOn');
                 }
+                if (!this.refreshInterval.isValid()) {
+                  this._disableOk();
+                }
             } else {
               var i = this.refreshLayers.indexOf(value);
               if (i > -1) {
@@ -336,6 +340,7 @@ define([
                     html.removeClass(rO, 'refreshOn');
                     html.addClass(rO, 'refreshOff');
                   }
+                  this._enableOk();
                 }
               }
             }
@@ -347,6 +352,30 @@ define([
 
         //TODO disable for StreamLayer
 
+      },
+
+      _f: function () {
+        if (this.refreshInterval.isValid()) {
+          this._enableOk();
+        } else {
+          this._disableOk();
+        }
+      },
+
+      _disableOk: function () {
+        var s = query(".button-container")[0];
+        var s2 = s.children[2];
+        var s3 = s.children[3];
+        domStyle.set(s2, "display", "none");
+        domStyle.set(s3, "display", "inline-block");
+      },
+
+      _enableOk: function () {
+        var s = query(".button-container")[0];
+        var s2 = s.children[2];
+        var s3 = s.children[3];
+        domStyle.set(s2, "display", "inline-block");
+        domStyle.set(s3, "display", "none");
       },
 
       _addFilterOption: function (tr) {
@@ -687,13 +716,18 @@ define([
             new Message({
               message: this.nls.missingRefreshValue
             });
-            //TODO need to figure out the correct way to prevent the popup from closing...just returning here doesn't work
-            return;
+            this.hasError = true;
+
+          } else {
+            this.hasError = false;
           }
+        } else {
+          this.hasError = false;
         }
 
-        dijitPopup.close();
 
+          dijitPopup.close();
+        
         var rows = this.layerTable.getRows();
         var table = [];
         var lInfo;
@@ -739,8 +773,16 @@ define([
       },
 
       destroy: function () {
-        dijitPopup.close();
-        this.inherited(arguments);
+        //if (!this.hasError) {
+          dijitPopup.close();
+          this.inherited(arguments);
+        //} else {
+        //  dijitPopup.close();
+        //  dijitPopup.destroy();
+        //  this.inherited(arguments);
+        //  dijitPopup.open();
+        //  //this.inherited(arguments);
+        //}
       }
     });
   });

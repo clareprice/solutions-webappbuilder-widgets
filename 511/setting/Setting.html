@@ -65,9 +65,10 @@
           <input type="text" name="refreshInterval"
                  placeholder="${nls.refreshInterval}"
                  data-dojo-type="dijit/form/ValidationTextBox"
-                 data-dojo-props="regExp:'[\\d]+', invalidMessage:'${nls.invalidInterval}',trim:true"
+                 data-dojo-props="regExp:'[\\d]+', invalidMessage:'${nls.invalidInterval}', missingMessage:'${nls.missingRefreshValue}', _hasBeenBlurred:true, trim:true"
                  data-dojo-attach-point="refreshInterval"
-                 style="width:240px; padding-left: 10px;">
+                 data-dojo-attach-event="onChange:_f"
+                 style="width:240px; padding-left: 10px;" required="true">
       </div>
   </div>
 </div>
