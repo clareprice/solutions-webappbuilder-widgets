@@ -61,7 +61,7 @@ define(['dojo/_base/declare',
             var st = styles[i];
             if (st.name === sName) {
               this._styleColor = st.styleColor;
-              this.updateUI();
+              this.updateUI(this._styleColor);
               break;
             }
           }
@@ -69,19 +69,23 @@ define(['dojo/_base/declare',
       });
     },
 
-    updateUI: function () {
-      if (this._styleColor) {
+    _getC: function () {
+      return this.clrs;
+    },
+
+    updateUI: function (_styleColor) {
+      if (_styleColor) {
         var updateNodes = this._options.updateNodes;
         for (var ii = 0; ii < updateNodes.length; ii++) {
-          domStyle.set(updateNodes[ii].node, updateNodes[ii].styleProp, this._styleColor);
+          domStyle.set(updateNodes[ii].node, updateNodes[ii].styleProp, _styleColor);
         }
-        //this.updateClusterLayerColors(this._options.layerList);
-        this._testNewGetColors(this._options.layerList);
+        this.updateClusterLayerColors(this._options.layerList);
+        //this.clrs = this._testNewGetColors(this._options.layerList, _styleColor);
       }
     },
 
-    _testNewGetColors: function (layerList) {
-      var _rgb = this.hexToRgb(this._styleColor);
+    _testNewGetColors: function (layerList, _styleColor) {
+      var _rgb = this.hexToRgb(_styleColor);
       var r = _rgb.r;
       var g = _rgb.g;
       var b = _rgb.b;
@@ -89,96 +93,104 @@ define(['dojo/_base/declare',
       var r1 = r;
       var g1 = g
       var b1 = b;
-
+      var oc = [];
       var colors = [];
       for (var key in layerList) {
         var l = layerList[key];
-        if (l.type === "ClusterLayer") {
-          if (colors.length > 0) {
-            var prevC = colors[colors.length - 1];
+        if (l.layerObject.symbolData){
+          if (l.layerObject.symbolData.clusteringEnabled && l.layerObject.symbolData.clusterType === "ThemeCluster") {
+            if (colors.length > 0) {
+              var prevC = colors[colors.length - 1];
 
-            r1 = (r + prevC.r) / 2;
-            g1 = (g + prevC.g) / 2;
-            b1 = (b + prevC.b) / 2;
+              r1 = (r + prevC.r) / 2;
+              g1 = (g + prevC.g) / 2;
+              b1 = (b + prevC.b) / 2;
 
-            var prevColor = this.generateRandomComplementaryColor4(r1, g1, b1);
-            colors.push(prevColor);
+              var prevColor = this.generateRandomComplementaryColor4(r1, g1, b1);
+              colors.push(prevColor);
 
-            r1 = prevColor.r;
-            g1 = prevColor.g;
-            b1 = prevColor.b;
-          } else {
-            var c = new Color();
-            c.r = r1;
-            c.b = b1;
-            c.g = g1;
-            colors.push(c);
+              r1 = prevColor.r;
+              g1 = prevColor.g;
+              b1 = prevColor.b;
+            } else {
+              var c = new Color();
+              c.r = r1;
+              c.b = b1;
+              c.g = g1;
+              colors.push(c);
+            }
+
+            //oc.push(this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
+
+            l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
+            //var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
+            //if (typeof (legendNode) !== 'undefined') {
+            //  domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
+            //}
+            l.layerObject.clusterFeatures();
           }
-
-
-
-          l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
-          var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
-          if (typeof (legendNode) !== 'undefined') {
-            domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
-          }
-          l.layerObject.clusterFeatures();
         }
       }
+      //return oc;
     },
 
     updateClusterLayerColors: function (layerList) {
       var _rgb = this.hexToRgb(this._styleColor);
       var x = 0;
       var xx = 30;
+      var oc = [];
       for (var key in layerList) {
         var l = layerList[key];
         if (l.type === "ClusterLayer") {
-          var evenOdd = x % 2 === 0;
-          var r = _rgb.r;
-          var g = _rgb.g;
-          var b = _rgb.b;
+          if (l.layerObject.symbolData) {
+            if (l.layerObject.symbolData.clusteringEnabled && l.layerObject.symbolData.clusterType === "ThemeCluster") {
+              var evenOdd = x % 2 === 0;
+              var r = _rgb.r;
+              var g = _rgb.g;
+              var b = _rgb.b;
 
-          var rr = r - xx;
-          if (evenOdd) {
-            if (rr > 255) {
-              rr = rr - 255
-            }
-            else if (rr < 0) {
-              rr = rr + 255
-            }
-          }
+              var rr = r - xx;
+              if (evenOdd) {
+                if (rr > 255) {
+                  rr = rr - 255
+                }
+                else if (rr < 0) {
+                  rr = rr + 255
+                }
+              }
 
-          var bb = b - xx;
-          if (x % 3 === 0) {
-            if (evenOdd) {
-              if (bb > 255) {
-                bb = bb - 255
+              var bb = b - xx;
+              if (x % 3 === 0) {
+                if (evenOdd) {
+                  if (bb > 255) {
+                    bb = bb - 255
+                  }
+                  else if (bb < 0) {
+                    bb = bb + 255
+                  }
+                }
               }
-              else if (bb < 0) {
-                bb = bb + 255
-              }
-            }
-          }
 
-          var gg = g - xx;
-          if (x % 5 === 0) {
-            if (evenOdd) {
-              if (gg > 255) {
-                gg = gg - 255
+              var gg = g - xx;
+              if (x % 5 === 0) {
+                if (evenOdd) {
+                  if (gg > 255) {
+                    gg = gg - 255
+                  }
+                  else if (gg < 0) {
+                    gg = gg + 255
+                  }
+                }
               }
-              else if (gg < 0) {
-                gg = gg + 255
+              xx = xx + xx;
+              l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
+              var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
+              if (legendNode) {
+                domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
               }
+              l.layerObject.clusterFeatures();
             }
           }
-          xx = xx + xx;
-          l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
-          var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
-          if (typeof (legendNode) !== 'undefined') {
-            domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
-          }
-          l.layerObject.clusterFeatures();
         }
       }
     },

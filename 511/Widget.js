@@ -79,7 +79,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
 
     onOpen: function () {
       this.widgetChange = false;
-
+      
       if (!this.mapExtentChangedHandler && !this.loadStaticData) {
         this.mapExtentChangedHandler = this.own(on(this.map, "extent-change", lang.hitch(this, this._mapExtentChange)));
           this._mapExtentChange();
@@ -268,6 +268,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     _createPanelUI: function (layerInfos) {
+      this.numClusterLayers = 0;
       var panelTitle = this.config.mainPanelText;
       if (typeof (panelTitle) === 'undefined') {
         panelTitle = "";
@@ -283,6 +284,19 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         this._createLayerListItem(lyrInfo);
       }
       this.addMapLayers();
+
+      var nodes = this.legendNodes;
+      nodes.push({
+        node: this.pageHeader,
+        styleProp: "background-color"
+      });
+
+      this.themeColorManager = new ThemeColorManager({
+        updateNodes: nodes,
+        layerList: this.layerList,
+        theme: this.appConfig.theme,
+        stylename: this.styleName
+      });
     },
 
     _createLayerListItem: function (lyrInfo) {
@@ -408,6 +422,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               visible: true,
               id: l.id
             };
+            this.numClusterLayers += 1;
           } else if(!lyrInfo.refresh && this.loadStaticData){
             var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
             l = dl.mapLayer;
@@ -453,6 +468,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
               visible: true,
               id: l.id
             };
+            this.numClusterLayers += 1;
           } else if (!lyrInfo.refresh && this.loadStaticData) {
             var dl = this._getFeatureCollection(lyrInfo, lyr, lyrType, results);
             l = dl.mapLayer;
@@ -627,6 +643,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         clusterLayer = this.map.getLayer(potentialNewID);
 
         var reloadData = false;
+        var refreshData = false;
 
         //update the filter if it has changed
         if (JSON.stringify(clusterLayer.filter) !== JSON.stringify(lyrInfo.filter)) {
@@ -637,13 +654,14 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         //update the symbol if it has changed
         if (JSON.stringify(clusterLayer.symbolData) !== JSON.stringify(lyrInfo.symbolData)) {
           clusterLayer.symbolData = lyrInfo.symbolData;
-          reloadData = true;
+          refreshData = true;
         }
 
         //update the icon if it has changed
         var n = domConstruct.toDom(lyrInfo.imageData);
         if (JSON.stringify(clusterLayer.icon) !== JSON.stringify(n.src)) {
           clusterLayer.icon = n.src;
+          refreshData = true;
         }
         domConstruct.destroy(n.id);
 
@@ -652,8 +670,14 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
           reloadData = true;
         }
 
+        if (refreshData) {
+          clusterLayer._setupSymbols();
+        }
+
         if (reloadData) {
           clusterLayer.refreshFeatures(clusterLayer.url);
+        } else if (refreshData) {
+          clusterLayer.clusterFeatures();
         }
       } else {
         var features;
@@ -780,19 +804,32 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
     },
 
     _updateUI: function (styleName) {
-
+      this.styleName = styleName;
       var nodes = this.legendNodes;
-      nodes.push({
-        node: this.pageHeader,
-        styleProp: "background-color"
-      });
+      //nodes.push({
+      //  node: this.pageHeader,
+      //  styleProp: "background-color"
+      //});
 
-      var themeColorManager = new ThemeColorManager({
-        updateNodes: nodes,
-        layerList: this.layerList,
-        theme: this.appConfig.theme,
-        stylename: styleName
-      });
+      if (Object.keys(this.layerList).length > 0) {
+        this.themeColorManager = new ThemeColorManager({
+          updateNodes: nodes,
+          layerList: this.layerList,
+          theme: this.appConfig.theme,
+          stylename: styleName
+        });
+      }
+
+      //TODO
+      //for (k in this.layerList) {
+      //  var l = this.layerList[k];
+      //  if (l.type === "ClusterLayer") {
+      //    this.layerList[k].tcm = this.themeColorManager;
+      //    l.layerObject.tcm = this.themeColorManager;
+      //    l.layerObject.clusterFeatures();
+      //  }
+      //}
+
     },
 
     _toggleLayer: function (obj) {
@@ -812,10 +849,7 @@ function (BaseWidget, LayerInfoFactory, LayerInfos, utils,
         lyr = this.layerList[id];
       }
 
-
-      
       if (lyr) {
-
         var hasSubLayerId = false;
         if (lyr.li) {
           if (lyr.li.hasOwnProperty("subLayerId")) {

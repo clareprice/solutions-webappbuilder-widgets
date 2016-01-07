@@ -111,6 +111,7 @@ define([
       postCreate: function () {
         this.inherited(arguments);
         this._getAllLayers();
+        //this.isInitalLoad = false
         this.own(on(this.btnAddLayer, 'click', lang.hitch(this, this._addLayerRow)));
         this.own(on(this.layerTable, 'actions-edit', lang.hitch(this, this._pickSymbol)));
       },
@@ -231,14 +232,17 @@ define([
         }
 
         this.layerTable.clear();
+        this.isInitalLoad = true;
+        this.layerLoadCount = 0;
         for (var i = 0; i < this.config.layerInfos.length; i++) {
-
           var lyrInfo = this.config.layerInfos[i];
           this._populateLayerRow(lyrInfo);
-        }
+          this.layerLoadCount += 1;
+        } 
       },
 
       _addLayerRow: function () {
+        this.isInitalLoad = false;
         var result = this.layerTable.addRow({});
         if (result.success && result.tr) {
           var tr = result.tr;
@@ -291,7 +295,15 @@ define([
           tabLayers.startup();
           tr.selectLayers = tabLayers;
           this.own(on(tabLayers, 'change', lang.hitch(this, function (v) {
-            this._addDefaultSymbol(tr);
+            if (!this.isInitalLoad) {
+              this._addDefaultSymbol(tr);
+            }
+
+            this.layerLoadCount -= 1;
+            if (this.layerLoadCount === 1) {
+              this.isInitalLoad = false;
+            }
+            
             // TODO...could also clear the label box here...still thinking if that is appropriate
           })));
         }
@@ -333,7 +345,6 @@ define([
               var i = this.refreshLayers.indexOf(value);
               if (i > -1) {
                 this.refreshLayers.splice(i, 1);
-
                 if (this.refreshLayers.length === 0) {
                   var rO = query('.refreshOn', this.refreshOptions.domNode)[0];
                   if (rO) {
@@ -354,7 +365,7 @@ define([
 
       },
 
-      _f: function () {
+      _updateOK: function () {
         if (this.refreshInterval.isValid()) {
           this._enableOk();
         } else {
@@ -405,29 +416,39 @@ define([
             hasSymbolData = sd.userDefinedSymbol && (sd.layerId === selectLayersValue);
           }
 
-          var options = {
-            nls: this.nls,
-            callerRow: tr,
-            layerInfo: lo,
-            value: selectLayersValue,
-            symbolInfo: hasSymbolData ? this.curRow.symbolData : lo.symbolData,
-            map: this.map,
-            ac: this.appConfig
-          };
-          var sourceDijit = new SymbolPicker(options);
-          sourceDijit._setSymbol();
+          if (!hasSymbolData || typeof(lo.symbolData) === 'undefined') {
+            var options = {
+              nls: this.nls,
+              callerRow: tr,
+              layerInfo: lo,
+              value: selectLayersValue,
+              symbolInfo: hasSymbolData ? this.curRow.symbolData : lo.symbolData,
+              map: this.map,
+              ac: this.appConfig
+            };
+            var sourceDijit = new SymbolPicker(options);
+            sourceDijit._setSymbol();
 
-          this.curRow.cells[3].innerHTML = "<div></div>";
-          this.curRow.symbolData = sourceDijit.symbolInfo;
+            this.curRow.cells[3].innerHTML = "<div></div>";
+            this.curRow.symbolData = sourceDijit.symbolInfo;
 
-          var newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
-          var r = this.layerTable.editRow(this.curRow, {
-            imageData: newDiv.innerHTML
-          });
+            var newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
+            var r = this.layerTable.editRow(this.curRow, {
+              imageData: newDiv.innerHTML
+            });
 
-          this.curRow = null;
-          sourceDijit.destroy();
-          sourceDijit = null;
+            this.curRow = null;
+            sourceDijit.destroy();
+            sourceDijit = null;
+          } else {
+            this.curRow.cells[3].innerHTML = "<div></div>";
+            this.curRow.symbolData = lo.symbolData;
+
+            var newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
+            var r = this.layerTable.editRow(this.curRow, {
+              imageData: newDiv.innerHTML
+            });
+          }
         }
       },
 

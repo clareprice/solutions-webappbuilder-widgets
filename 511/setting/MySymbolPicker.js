@@ -110,6 +110,7 @@ define(['dojo/_base/declare',
         if (typeof (this.symbolInfo) !== 'undefined') {
           //set retained symbol properties
           this.symbolType = this.symbolInfo.symbolType;
+          this.clusterType = this.symbolInfo.clusterType;
           this.iconType = this.symbolInfo.iconType;
           this.clusteringEnabled = this.symbolInfo.clusteringEnabled;
           this.userDefinedSymbol = this.symbolInfo.userDefinedSymbol;
@@ -142,10 +143,12 @@ define(['dojo/_base/declare',
             case 'ThemeCluster':
               this.userDefinedSymbol = true;
               this.rdoThemeCluster.set('checked', true);
+              this.clusterType = 'ThemeCluster';
               break;
             case 'CustomCluster':
               this.userDefinedSymbol = true;
               this.rdoCustomCluster.set('checked', true);
+              this.clusterType = 'CustomCluster';
               break;
           }
 
@@ -168,12 +171,18 @@ define(['dojo/_base/declare',
           //set cluster options properties
           if (typeof (this.symbolInfo.clusterType) !== 'undefined') {
             if (this.symbolInfo.clusterType === "CustomCluster") {
-              this.clusterPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.clusterSymbol));
+              this.rdoCustomCluster.set('checked', true);
+              if (this.symbolInfo.clusterSymbol) {
+                this.clusterPicker.showBySymbol(jsonUtils.fromJson(this.symbolInfo.clusterSymbol));
+              }
+            } else {
+              this.rdoThemeCluster.set('checked', true);
             }
             this.userDefinedSymbol = true;
-          }
+          } 
           this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);
           this._chkClusterChanged(this.symbolInfo.clusteringEnabled);
+          
         } else {
           //default state
           this.rdoLayerSym.set('checked', true);
@@ -199,13 +208,6 @@ define(['dojo/_base/declare',
 
       resetIcon: function (s) {
         this.customIconPlaceholder.innerHTML = "<div></div>";
-
-        //var a = domConstruct.create("div", {
-        //  class: "customPlaceholder",
-        //  innerHTML: ['<img class="customPlaceholder" src="', s, '"/>'].join(''),
-        //  title: this.nls.editCustomIcon
-        //});
-
         var a = domConstruct.create("div", {
           class: "customPlaceholder",
           innerHTML: [s],
@@ -402,7 +404,14 @@ define(['dojo/_base/declare',
       _chkClusterChanged: function (v) {
         this.clusteringEnabled = v;
         html.setStyle(this.grpClusterOptions, 'display', v ? "block" : "none");
-        html.setStyle(this.grpThemeClusterOptions, 'display', v ? "block" : "none");      
+        html.setStyle(this.grpThemeClusterOptions, 'display', v ? "block" : "none");
+
+        if (v) {
+          if (typeof (this.clusterType) === 'undefined') {
+            this.clusterType = "CustomCluster";
+            this.rdoCustomCluster.set('checked', true);
+          }
+        }
       },
 
       _rdoThemeClusterChanged: function (v) {
