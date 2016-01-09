@@ -29,16 +29,11 @@ define([
     'dijit/form/Select',
     'dijit/form/ValidationTextBox',
     'dijit/form/CheckBox',
-    'jimu/dijit/Message',
     'jimu/dijit/LoadingShelter',
-    'jimu/dijit/Filter',
     'jimu/dijit/Popup',
-    'jimu/dijit/Message',
     'jimu/utils',
-    'jimu/dijit/_FeaturelayerServiceChooserContent',
     'esri/request',
     'esri/symbols/jsonUtils',
-    'dijit/TooltipDialog',
     'dijit/popup',
     'dojo/_base/lang',
     'dojo/DeferredList',
@@ -68,16 +63,11 @@ define([
     Select,
     ValidationTextBox,
     CheckBox,
-    Message,
     LoadingShelter,
-    Filter,
     Popup,
-    Message,
     utils,
-    _FeaturelayerServiceChooserContent,
     esriRequest,
     jsonUtils,
-    TooltipDialog,
     dijitPopup,
     lang,
     DeferredList,
@@ -103,15 +93,9 @@ define([
       hasUpdatedInfo: false,
       hasError: false,
 
-      // 2) Add cluster SVG or other sumbol props beside the icon in the settings table
-      // 3) Finish the remove of the second download script button
-      // 4) Label should reset or clear on selection changed for the drop down?
-
-
       postCreate: function () {
         this.inherited(arguments);
         this._getAllLayers();
-        //this.isInitalLoad = false
         this.own(on(this.btnAddLayer, 'click', lang.hitch(this, this._addLayerRow)));
         this.own(on(this.layerTable, 'actions-edit', lang.hitch(this, this._pickSymbol)));
       },
@@ -132,16 +116,10 @@ define([
       },
 
       _setLayers: function () {
+        //TODO This is also overly redundant
         var options = [];
         for (var i = 0; i < this.opLayers._layerInfos.length; i++) {
           var OpLyr = this.opLayers._layerInfos[i];
-          //var lo = OpLyr.layerObject;
-          //var isFC = false;
-          //if(lo && lo.hasOwnProperty("type")){
-          //  isFC = lo.type === "FeatureCollection";
-          //}
-
-          //if (OpLyr.newSubLayers.length > 0 && !isFC) {
           if (OpLyr.newSubLayers.length > 0) {
             this._recurseOpLayers(OpLyr.newSubLayers, options);
           } else if (OpLyr.featureCollection) {
@@ -154,12 +132,10 @@ define([
               if (OpLyr2.featureCollection.layers.length > 1) {
                 this._recurseOpLayers(OpLyr2.featureCollection.layers, options);
               } else {
-                
                 options.unshift({
                   label: OpLyr.title,
                   value: OpLyr.title,
                   url: undefined,
-                  use: OpLyr.use,
                   imageData: OpLyr.imageData,
                   id: OpLyr.id,
                   geometryType: OpLyr2.featureCollection.layers[0].layerObject.geometryType,
@@ -169,16 +145,13 @@ define([
                 });
               }
             } else {
-
               if (typeof (OpLyr.layerObject.geometryType) === 'undefined') {
                 this.setGeometryType(OpLyr.layerObject);
               }
-
               options.unshift({
                 label: OpLyr.title,
                 value: OpLyr.title,
                 url: OpLyr.layerObject.url,
-                use: OpLyr.use,
                 imageData: OpLyr.imageData,
                 id: OpLyr.id,
                 type: OpLyr.type,
@@ -187,21 +160,13 @@ define([
               });
             }
           } else {
-            //TODO determine and pass in geom type here
-            // should I also do the layer type and any of the other type work that is needed
-            // by the widget here so that can all be done up front
-            // in addition to that...should I also just fire off the queries to the datasources at this time??
-            //  if we did that then we could basically just pass the layer instances to the widget...update the props as they change 
-            //  and further minimize the delay we see on panel load...need to think through this further
             if (typeof (OpLyr.layerObject.geometryType) === 'undefined') {
               this.setGeometryType(OpLyr.layerObject);
             }
-
             options.unshift({
               label: OpLyr.title,
               value: OpLyr.title,
               url: OpLyr.layerObject.url,
-              use: OpLyr.use,
               imageData: OpLyr.imageData,
               id: OpLyr.id,
               type: OpLyr.type,
@@ -238,7 +203,7 @@ define([
           var lyrInfo = this.config.layerInfos[i];
           this._populateLayerRow(lyrInfo);
           this.layerLoadCount += 1;
-        } 
+        }
       },
 
       _addLayerRow: function () {
@@ -249,7 +214,6 @@ define([
           this._addLayersOption(tr);
           this._addLabelOption(tr);
           this._addRefreshOption(tr);
-          this._addFilterOption(tr);
           this._addDefaultSymbol(tr);
         }
       },
@@ -261,7 +225,6 @@ define([
           this._addLayersOption(tr);
           this._addLabelOption(tr);
           this._addRefreshOption(tr);
-          this._addFilterOption(tr);
           tr.selectLayers.set("value", lyrInfo.layer);
           tr.labelText.set("value", lyrInfo.label);
           tr.refreshBox.set("checked", lyrInfo.refresh);
@@ -303,8 +266,6 @@ define([
             if (this.layerLoadCount === 1) {
               this.isInitalLoad = false;
             }
-            
-            // TODO...could also clear the label box here...still thinking if that is appropriate
           })));
         }
       },
@@ -324,7 +285,9 @@ define([
       },
 
       _addRefreshOption: function (tr) {
-        var td = query('.simple-table-cell', tr)[5];
+        //TODO disable for everything but feature collections
+
+        var td = query('.simple-table-cell', tr)[4];
         html.setStyle(td, "verticalAlign", "middle");
         this.currentTR = tr;
         var refreshCheckBox = new CheckBox({
@@ -332,15 +295,15 @@ define([
             var value = this.currentTR.selectLayers.value;
             if (v) {
               var lyrInfo = this._getLayerOptionByValue(value);
-                this.refreshLayers.push(value);
-                var rO = query('.refreshOff', this.refreshOptions.domNode)[0];
-                if (rO) {
-                  html.removeClass(rO, 'refreshOff');
-                  html.addClass(rO, 'refreshOn');
-                }
-                if (!this.refreshInterval.isValid()) {
-                  this._disableOk();
-                }
+              this.refreshLayers.push(value);
+              var rO = query('.refreshOff', this.refreshOptions.domNode)[0];
+              if (rO) {
+                html.removeClass(rO, 'refreshOff');
+                html.addClass(rO, 'refreshOn');
+              }
+              if (!this.refreshInterval.isValid()) {
+                this._disableOk();
+              }
             } else {
               var i = this.refreshLayers.indexOf(value);
               if (i > -1) {
@@ -360,9 +323,6 @@ define([
         refreshCheckBox.placeAt(td);
         refreshCheckBox.startup();
         tr.refreshBox = refreshCheckBox;
-
-        //TODO disable for StreamLayer
-
       },
 
       _updateOK: function () {
@@ -389,23 +349,10 @@ define([
         domStyle.set(s3, "display", "none");
       },
 
-      _addFilterOption: function (tr) {
-        var td = query('.simple-table-cell', tr)[4];
-        var addFilterBtn = domConstruct.create("div", {
-          class: "addFilterOn",
-          title: this.nls.filterBtnTitle
-        }, td);
-        on(addFilterBtn, "click", lang.hitch(this, function (m) {
-          var lo = this._getLayerOptionByValue(m.children[0].textContent);
-          this._showFilter(lo.url);
-        }, tr));
-      },
-
       _addDefaultSymbol: function (tr) {
         var td = query('.simple-table-cell', tr)[0];
         this.curRow = tr;
         if (td) {
-          //TODO need to get the layer and get the first symbol from the renderer
           var lo = this._getLayerOptionByValue(td.children[0].textContent);
           var selectLayersValue = tr.selectLayers.value;
 
@@ -416,7 +363,7 @@ define([
             hasSymbolData = sd.userDefinedSymbol && (sd.layerId === selectLayersValue);
           }
 
-          if (!hasSymbolData || typeof(lo.symbolData) === 'undefined') {
+          if (!hasSymbolData || typeof (lo.symbolData) === 'undefined') {
             var options = {
               nls: this.nls,
               callerRow: tr,
@@ -470,47 +417,6 @@ define([
         }
       },
 
-      _showFilter: function (url) {
-        //TODO init this with any expressions from the web map layer
-        var filter = new Filter({
-          noFilterTip: this.nls.noFilterTip,
-          style: "width:100%;margin-top:22px;"
-        });
-
-        var filterPopup = new Popup({
-          titleLabel: this.nls.filterPopupTitle,
-          width: 680,
-          height: 485,
-          content: filter,
-          buttons: [{
-            label: this.nls.popupOk,
-            onClick: lang.hitch(this, function () {
-              var partsObj = filter.toJson();
-              if (partsObj && partsObj.expr) {
-                var lo = this._getLayerOptionByURL(filter.url);
-                lo.filter = partsObj;
-                filterPopup.close();
-                filterPopup = null;
-              } else {
-                new Message({
-                  message: this.nls.filterInvalid
-                });
-              }
-            })
-          }, {
-            label: this.nls.popupCancel
-          }]
-        });
-
-        var lyrO = this._getLayerOptionByURL(url);
-        if (lyrO.hasOwnProperty('filter')) {
-          filterObj = lyrO.filter;
-          filter.buildByFilterObj(url, filterObj, null);
-        } else {
-          filter.buildByExpr(url, null, null);
-        }
-      },
-
       _recurseOpLayers: function (pNode, pOptions) {
         var nodeGrp = pNode;
         array.forEach(nodeGrp, lang.hitch(this, function (Node) {
@@ -540,7 +446,6 @@ define([
             if (Node.layerObject) {
               if (Node.layerObject.url) {
                 u = Node.layerObject.url;
-                //TODO should first test if int
                 subLayerId = parseInt(u.substr(u.lastIndexOf('/') + 1));
               }
             }
@@ -625,7 +530,7 @@ define([
             } else {
               symbol.setWidth(2);
             }
-          } else if(typeof(symbol.size) !== 'undefined') {
+          } else if (typeof (symbol.size) !== 'undefined') {
             if (symbol.size > 20) {
               symbol.setSize(20);
             }
@@ -669,13 +574,13 @@ define([
           var queryList = new DeferredList(queries);
           queryList.then(lang.hitch(this, function (queryResults) {
             if (queryResults) {
-              if(queryResults.length > 0) {
+              if (queryResults.length > 0) {
                 var resultInfo = queryResults[0][1];
                 if (this.layer_options[resultInfo.id].value === resultInfo.name) {
                   //TODO...need to loop through the results and find the match if this condition is not hit
                   //...not sure this would ever be the case but better safe than sorry
                   this.layer_options[resultInfo.id].geometryType = resultInfo.geometryType;
-                  if(typeof(resultInfo.drawingInfo) !== 'undefined'){
+                  if (typeof (resultInfo.drawingInfo) !== 'undefined') {
                     this.layer_options[resultInfo.id].renderer = resultInfo.drawingInfo.renderer;
                     this.layer_options[resultInfo.id].drawingInfo = resultInfo.drawingInfo;
 
@@ -685,9 +590,9 @@ define([
                     var f;
                     for (var i = 0; i < resultInfo.fields.length; i++) {
                       f = resultInfo.fields[i];
-                      if(f.type === "esriFieldTypeOID"){
+                      if (f.type === "esriFieldTypeOID") {
                         break
-                      }                 
+                      }
                     }
                     this.layer_options[resultInfo.id].oidFieldName = f;
                   }
@@ -719,36 +624,9 @@ define([
         this.fileInput.click();
       },
 
-      downloadRefreshConfig: function () {
-        alert("Code to download the config based on widget config goes here");
-      },
-
-      downloadRefreshScript: function () {
-        alert("Easy way for the user to get the script goes here");
-      },
-
-      _chkStaticChanged: function (v) {
-        this.loadStaticData = v;
-      },
-
       getConfig: function () {
-        if (query('.refreshOn', this.refreshOptions.domNode)[0]) {
-          if (!this.refreshInterval.value) {
-            new Message({
-              message: this.nls.missingRefreshValue
-            });
-            this.hasError = true;
+        dijitPopup.close();
 
-          } else {
-            this.hasError = false;
-          }
-        } else {
-          this.hasError = false;
-        }
-
-
-          dijitPopup.close();
-        
         var rows = this.layerTable.getRows();
         var table = [];
         var lInfo;
@@ -758,13 +636,11 @@ define([
           var labelTextValue = utils.sanitizeHTML(tr.labelText.value);
           var refreshBox = tr.refreshBox;
           var lo = this._getLayerOptionByValue(selectLayersValue);
-    
 
           lInfo = {
             layer: selectLayersValue,
             label: labelTextValue !== "" ? labelTextValue : selectLayersValue,
             refresh: refreshBox.checked,
-            filter: lo.filter,
             url: lo.url,
             type: lo.type,
             id: lo.id,
@@ -787,23 +663,14 @@ define([
         this.config.mainPanelText = utils.sanitizeHTML(this.mainPanelText.value);
         this.config.mainPanelIcon = this.panelMainIcon.innerHTML;
         this.config.refreshInterval = utils.sanitizeHTML(this.refreshInterval.value);
-        this.config.loadStaticData = this.loadStaticData;
         this.config.refreshEnabled = this.refreshLayers.length > 0 ? true : false;
 
         return this.config;
       },
 
       destroy: function () {
-        //if (!this.hasError) {
-          dijitPopup.close();
-          this.inherited(arguments);
-        //} else {
-        //  dijitPopup.close();
-        //  dijitPopup.destroy();
-        //  this.inherited(arguments);
-        //  dijitPopup.open();
-        //  //this.inherited(arguments);
-        //}
+        dijitPopup.close();
+        this.inherited(arguments);
       }
     });
   });

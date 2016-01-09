@@ -10,7 +10,6 @@
              {name:"label",title:"${nls.layerLabel}","class":"label",type:"empty", width:"80px"},
              {name:"upload",title:"${nls.iconColumnText}","class":"actions",type:"actions",actions:["edit"],width:"20px"},
              {name:"image",title:"",width:"20px",type:"empty",hidden:false,"class":"imageTest"},
-             {name:"filter",title:"${nls.filter}","class":"filter",type:"empty",width:"30px"},
              {name:"refresh",title:"${nls.layerRefresh}",type:"empty", width:"40px"},
              {name:"actions",title:"${nls.actions}","class":"actions actions2",type:"actions",actions:["up","down","delete"],width:"45px"}]'>
     </div>
@@ -20,10 +19,6 @@
   </div>
   <hr />
   <div style="padding-top:20px;">
-      <div data-dojo-attach-point="div_chkStatic" style="padding-bottom: 20px; display: none;">
-          <input data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="chkStatic" title="${nls.chkStatic}" data-dojo-attach-event="onChange:_chkStaticChanged" />
-          <span class="label">${nls.chkStatic}</span>
-      </div>
       <div class="mainPanelPreviewContainer">
       <div data-dojo-attach-point="mainPanelPreviewButton" class="mainPanelPreviewButton">
         <div data-dojo-attach-event="onclick:uploadImage" class="jimu-btn">

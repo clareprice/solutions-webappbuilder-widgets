@@ -31,10 +31,6 @@ define(['dojo/_base/declare',
     //need to know the right time to get the map
     //and hook to map changed event...if I even need to
     //listen to layer changed events
-
-    //not sure if I will listen to app config changed here or do it like the ThemeColorManager and just call methods from the object
-    // and only listen to app config changes in the widget
-
     constructor: function (options) {
       this._map = options.map;
       this._layerList = options.configLayerList;
@@ -100,6 +96,8 @@ define(['dojo/_base/declare',
       //if auto is true all layers will be marked as visible false
       //if auto is false all layers will set to the inital visibility captured onOpen
       // expectes the layers object to be {key: <LayerID>, values: { type: <LayerTypeString>, layerObject: <LayerInstance>, visible: <bool>}}
+
+      //TODO need to update back to the org renderer if it has one
       var alreadyChecked = [];
       if (lyrs) {
         for (var key in lyrs) {
@@ -108,15 +106,9 @@ define(['dojo/_base/declare',
           if (!(alreadyChecked.indexOf(l.id) > -1)){
           if (l.visibleSubLayers) {
             l.layerObject.setVisibleLayers(l.visibleSubLayers);
-          } else 
-          if (typeof (l.pl) === 'undefined') {
+          } else if (typeof (l.pl) === 'undefined') {
             l.layerObject.setVisibility(auto ? false : l.visible);
-          }
-            //else if (l.pl.parentLayerInfo) {
-            //  //TODO this may not be necessary if I can get and add the correct LO to the layerList
-            //  l.pl.parentLayerInfo.layerObject.setVisibility(auto ? false : l.visible);
-            //}
-          else {
+          } else {
             if (l.layerObject.layerInfos){
               if (l.layerObject.layerInfos.length > 0) {
                 var visLayers = [];
@@ -151,7 +143,6 @@ define(['dojo/_base/declare',
           }
         }
         }
-        //TODO need to understand how to make LayerList update
       }
     },
 
@@ -161,7 +152,7 @@ define(['dojo/_base/declare',
       this._initalLayerVisibility = {};
       var clusterLayers = {};
       for (var key in this._layerList) {
-        if (this._layerList[key].type === "ClusterLayer" || this._layerList[key].type === "FeatureCollectionLayer") {
+        if (this._layerList[key].type === "ClusterLayer") {
           clusterLayers[key] = this._layerList[key];
         }
       }

@@ -341,18 +341,6 @@ define(['dojo/_base/declare',
           }
         }
 
-        //this.symbolInfo = {
-        //  symbolType: this.symbolType,
-        //  symbol: symbol,
-        //  clusterSymbol: this.clusterSymbol,
-        //  clusteringEnabled: this.clusteringEnabled,
-        //  icon: icon,
-        //  clusterType: this.clusterType,
-        //  iconType: this.iconType,
-        //  renderSymbols: this.renderSymbols,
-        //  renderer: this.renderer,
-        //  s: this.customIconPlaceholder.children[0].src
-        //};
         var ssss;
         if (this.customIconPlaceholder.children.length > 0) {
           ssss = this.customIconPlaceholder.children[0].src;
@@ -484,18 +472,6 @@ define(['dojo/_base/declare',
         }
       },
 
-      //_createImageDataDiv: function (sym, convert, node) {
-      //  var symbol = convert ? jsonUtils.fromJson(sym) : sym;
-      //  var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
-      //  var mySurface = gfx.createSurface(a, 26, 26);
-      //  var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
-      //  var shape = mySurface.createShape(descriptors.defaultShape)
-      //                .setFill(descriptors.fill)
-      //                .setStroke(descriptors.stroke);
-      //  shape.applyTransform({ dx: 13, dy: 13 });
-      //  return a;
-      //},
-
       _createImageDataDiv: function (sym, convert, node) {
         var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
         var symbol = convert ? jsonUtils.fromJson(sym) : sym;
@@ -545,9 +521,6 @@ define(['dojo/_base/declare',
           if (this.geometryType === 'esriGeometryPoint') {
             symbol.setWidth(25);
           }
-          //else {
-          //  symbol.setWidth(2);
-          //}
           if (typeof (symbol.setHeight) !== 'undefined') {
             symbol.setHeight(25);
           }

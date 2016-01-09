@@ -69,10 +69,6 @@ define(['dojo/_base/declare',
       });
     },
 
-    _getC: function () {
-      return this.clrs;
-    },
-
     updateUI: function (_styleColor) {
       if (_styleColor) {
         var updateNodes = this._options.updateNodes;
@@ -80,58 +76,7 @@ define(['dojo/_base/declare',
           domStyle.set(updateNodes[ii].node, updateNodes[ii].styleProp, _styleColor);
         }
         this.updateClusterLayerColors(this._options.layerList);
-        //this.clrs = this._testNewGetColors(this._options.layerList, _styleColor);
       }
-    },
-
-    _testNewGetColors: function (layerList, _styleColor) {
-      var _rgb = this.hexToRgb(_styleColor);
-      var r = _rgb.r;
-      var g = _rgb.g;
-      var b = _rgb.b;
-
-      var r1 = r;
-      var g1 = g
-      var b1 = b;
-      var oc = [];
-      var colors = [];
-      for (var key in layerList) {
-        var l = layerList[key];
-        if (l.layerObject.symbolData){
-          if (l.layerObject.symbolData.clusteringEnabled && l.layerObject.symbolData.clusterType === "ThemeCluster") {
-            if (colors.length > 0) {
-              var prevC = colors[colors.length - 1];
-
-              r1 = (r + prevC.r) / 2;
-              g1 = (g + prevC.g) / 2;
-              b1 = (b + prevC.b) / 2;
-
-              var prevColor = this.generateRandomComplementaryColor4(r1, g1, b1);
-              colors.push(prevColor);
-
-              r1 = prevColor.r;
-              g1 = prevColor.g;
-              b1 = prevColor.b;
-            } else {
-              var c = new Color();
-              c.r = r1;
-              c.b = b1;
-              c.g = g1;
-              colors.push(c);
-            }
-
-            //oc.push(this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
-
-            l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
-            //var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
-            //if (typeof (legendNode) !== 'undefined') {
-            //  domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(r1, g1, b1).replace('.', ''), 1));
-            //}
-            l.layerObject.clusterFeatures();
-          }
-        }
-      }
-      //return oc;
     },
 
     updateClusterLayerColors: function (layerList) {
@@ -234,85 +179,7 @@ define(['dojo/_base/declare',
     cToHex: function (c) {
       var hex = c.toString(16);
       return hex.length == 1 ? "0" + hex : hex;
-    },
-
-    //The following is not currently used but I may go back to this idea
-    generateRandomComplementaryColor2: function (r, g, b) {
-      var red = Math.floor((Math.random() * 256));
-      var green = Math.floor((Math.random() * 256));
-      var blue = Math.floor((Math.random() * 256));
-
-      //IE's Math.random is not random enough.
-      //TODO...try this as the default
-      if (!/MSIE 9/i.test(navigator.userAgent) && !/MSIE 10/i.test(navigator.userAgent) && !/rv:11.0/i.test(navigator.userAgent)) {
-        red = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-        green = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-        blue = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-      };
-
-      //return this.rgbToHex(Math.floor(red), Math.floor(green), Math.floor(blue));
-      var c = new Color();
-      c.r = Math.round((red + r) / 2);
-      c.b = Math.round((blue + b) / 2);
-      c.g = Math.round((green + g) / 2);
-      return c;
-    },
-
-    //The following is not currently used but I may go back to this idea
-    generateRandomComplementaryColor3: function (r, g, b) {
-      var red = Math.floor((Math.random() * 256));
-      var green = Math.floor((Math.random() * 256));
-      var blue = Math.floor((Math.random() * 256));
-
-      var red2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-      var green2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-      var blue2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-
-      var c = new Color();
-      c.r = Math.round((r + red + red2) / 3);
-      c.b = Math.round((b + blue + blue2) / 3);
-      c.g = Math.round((g + green + green2) / 3);
-      return c;
-    },
-
-    //The following is not currently used but I may go back to this idea
-    generateRandomComplementaryColor4: function (r, g, b) {
-      var red = Math.floor((Math.random() * 256));
-      var green = Math.floor((Math.random() * 256));
-      var blue = Math.floor((Math.random() * 256));
-
-      //IE's Math.random is not random enough.
-      //TODO...try this as the default
-      if (!/MSIE 9/i.test(navigator.userAgent) && !/MSIE 10/i.test(navigator.userAgent) && !/rv:11.0/i.test(navigator.userAgent)) {
-        red = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-        green = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-        blue = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-      };
-
-      var c = new Color();
-      c.r = red;
-      c.b = blue;
-      c.g = green;
-      return c;
-    },
-
-    //The following is not currently used but I may go back to this idea
-    generateRandomComplementaryColor5: function (r, g, b) {
-      var red = Math.floor((Math.random() * 256));
-      var green = Math.floor((Math.random() * 256));
-      var blue = Math.floor((Math.random() * 256));
-
-      var red2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-      var green2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-      var blue2 = Math.floor((('0.' + window.crypto.getRandomValues(new Uint32Array(1))[0]) * 256));
-
-      var c = new Color();
-      c.r = red2;
-      c.b = blue2;
-      c.g = green2;
-      return c;
     }
-
   });
 
   return themeColorManager;
