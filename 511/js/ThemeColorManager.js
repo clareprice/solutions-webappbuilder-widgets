@@ -17,18 +17,17 @@
 define(['dojo/_base/declare',
   'dojo/_base/lang',
   'dojo/_base/xhr',
-  'dojo/_base/Color',
-  'dojo/topic',
   'dojo/dom-style',
-  'dojo/dom'
-], function (declare, lang, xhr, Color, topic, domStyle, dom) {
+  'dojo/dom',
+  'dojo/_base/Color'
+], function (declare, lang, xhr, domStyle, dom, Color) {
   var themeColorManager = declare(null, {
     _theme: null,
     _styleName: "",
     _styleColor: null,
     _options: null,
 
-    //Public Methods 
+    //Public Methods
     // updateUI(options): Updates UI nodes with the theme color
     //   options: {updateNodes: [{node: <domNode>, styleProp: <style prop like 'background-color'>}]}
     //
@@ -80,10 +79,11 @@ define(['dojo/_base/declare',
     },
 
     updateClusterLayerColors: function (layerList) {
-      var _rgb = this.hexToRgb(this._styleColor);
+      var _rgb = Color.fromHex(this._styleColor);
+      //var _rgb = this.hexToRgb(this._styleColor);
       var x = 0;
       var xx = 30;
-      var oc = [];
+      //var oc = [];
       for (var key in layerList) {
         var l = layerList[key];
         if (l.type === "ClusterLayer") {
@@ -97,10 +97,10 @@ define(['dojo/_base/declare',
               var rr = r - xx;
               if (evenOdd) {
                 if (rr > 255) {
-                  rr = rr - 255
+                  rr = rr - 255;
                 }
                 else if (rr < 0) {
-                  rr = rr + 255
+                  rr = rr + 255;
                 }
               }
 
@@ -108,10 +108,10 @@ define(['dojo/_base/declare',
               if (x % 3 === 0) {
                 if (evenOdd) {
                   if (bb > 255) {
-                    bb = bb - 255
+                    bb = bb - 255;
                   }
                   else if (bb < 0) {
-                    bb = bb + 255
+                    bb = bb + 255;
                   }
                 }
               }
@@ -120,65 +120,24 @@ define(['dojo/_base/declare',
               if (x % 5 === 0) {
                 if (evenOdd) {
                   if (gg > 255) {
-                    gg = gg - 255
+                    gg = gg - 255;
                   }
                   else if (gg < 0) {
-                    gg = gg + 255
+                    gg = gg + 255;
                   }
                 }
               }
               xx = xx + xx;
-              l.layerObject.setColor(this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
-              var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
-              if (legendNode) {
-                domStyle.set(legendNode, "background-color", this.increaseBrightness(this.rgbToHex(rr, gg, bb).replace('.', ''), 1));
-              }
+              l.layerObject.setColor(Color.fromArray([rr,gg,bb,1]));
+              //var legendNode = dom.byId("legend_symbol_" + l.layerObject.id);
+              //if (legendNode) {
+              //  domStyle.set(legendNode, "background-color"
+              //}
               l.layerObject.clusterFeatures();
             }
           }
         }
       }
-    },
-
-    increaseBrightness: function (hex, percent) {
-      hex = hex.replace(/^\s*#|\s*$/g, '');
-      if (hex.length == 3) {
-        hex = hex.replace(/(.)/g, '$1$1');
-      }
-
-      var r = parseInt(hex.substr(0, 2), 16),
-          g = parseInt(hex.substr(2, 2), 16),
-          b = parseInt(hex.substr(4, 2), 16);
-
-      var x = '#' +
-         ((0 | (1 << 8) + r + (256 - r) * percent / 100).toString(16)).substr(1) +
-         ((0 | (1 << 8) + g + (256 - g) * percent / 100).toString(16)).substr(1) +
-         ((0 | (1 << 8) + b + (256 - b) * percent / 100).toString(16)).substr(1);
-
-      return x;
-    },
-
-    hexToRgb: function (hex) {
-      var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-      hex = hex.replace(shorthandRegex, function (m, r, g, b) {
-        return r + r + g + g + b + b;
-      });
-
-      var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-      } : null;
-    },
-
-    rgbToHex: function (r, g, b) {
-      return "#" + this.cToHex(r) + this.cToHex(g) + this.cToHex(b);
-    },
-
-    cToHex: function (c) {
-      var hex = c.toString(16);
-      return hex.length == 1 ? "0" + hex : hex;
     }
   });
 

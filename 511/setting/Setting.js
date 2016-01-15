@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// Copyright � 2014 Esri. All Rights Reserved.
+// Copyright 2014 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,21 +15,15 @@
 ///////////////////////////////////////////////////////////////////////////
 
 define([
-    'dijit/registry',
     'dojo/query',
     'dojo/dom-construct',
-    'jimu/dijit/ImageChooser',
     'dojo/_base/declare',
     'dijit/_WidgetsInTemplateMixin',
-    'dijit/Editor',
     'jimu/BaseWidgetSetting',
-    'jimu/dijit/SimpleTable',
     'jimu/LayerInfos/LayerInfos',
-    'dijit/form/Button',
     'dijit/form/Select',
     'dijit/form/ValidationTextBox',
     'dijit/form/CheckBox',
-    'jimu/dijit/LoadingShelter',
     'jimu/dijit/Popup',
     'jimu/utils',
     'esri/request',
@@ -39,31 +33,21 @@ define([
     'dojo/DeferredList',
     'dojo/on',
     'dojox/gfx',
-    'dojo/dom-class',
-    'dojo/Deferred',
     'dojo/dom-style',
-    'dojo/query',
     'dojo/_base/html',
     'dojo/_base/array',
-    'dojo/sniff',
     './MySymbolPicker'
 ],
   function (
-    registry,
     query,
     domConstruct,
-    ImageChooser,
     declare,
     _WidgetsInTemplateMixin,
-    Editor,
     BaseWidgetSetting,
-    Table,
     LayerInfos,
-    Button,
     Select,
     ValidationTextBox,
     CheckBox,
-    LoadingShelter,
     Popup,
     utils,
     esriRequest,
@@ -73,13 +57,9 @@ define([
     DeferredList,
     on,
     gfx,
-    domClass,
-    Deferred,
     domStyle,
-    query,
     html,
     array,
-    has,
     SymbolPicker
     ) {
     return declare([BaseWidgetSetting, _WidgetsInTemplateMixin], {
@@ -115,22 +95,46 @@ define([
         }
       },
 
+      _getInfoTemplate: function(originOpLayer){
+        var infoTemplate;
+        if (originOpLayer) {
+          if (originOpLayer.parentLayerInfo) {
+            if (originOpLayer.parentLayerInfo.controlPopupInfo) {
+              var infoTemplates = originOpLayer.parentLayerInfo.controlPopupInfo.infoTemplates;
+              var subLayerId = OpLyr.layerObject.url.split("/").pop();
+              if(infoTemplates){
+                if (infoTemplates.indexOf(subLayerId) > -1) {
+                  infoTemplate = infoTemplates[subLayerId].infoTemplate;
+                }
+              }
+            }
+          }
+        }
+        return infoTemplate;
+      },
+
+// TODO this is also too redundant
       _setLayers: function () {
         //TODO This is also overly redundant
         var options = [];
         for (var i = 0; i < this.opLayers._layerInfos.length; i++) {
           var OpLyr = this.opLayers._layerInfos[i];
+          var infoTemplate;
+          var originOpLayer;
+          if (OpLyr.originOperLayer) {
+            originOpLayer = OpLyr.originOperLayer;
+            infoTemplate = this._getInfoTemplate(originOpLayer);
+          }
           if (OpLyr.newSubLayers.length > 0) {
             this._recurseOpLayers(OpLyr.newSubLayers, options);
           } else if (OpLyr.featureCollection) {
             if (OpLyr.layers.length > 1) {
               this._recurseOpLayers(OpLyr.layers, options);
             }
-          } else if (OpLyr.originOperLayer) {
-            var OpLyr2 = OpLyr.originOperLayer;
-            if (OpLyr2.featureCollection) {
-              if (OpLyr2.featureCollection.layers.length > 1) {
-                this._recurseOpLayers(OpLyr2.featureCollection.layers, options);
+          } else if (originOpLayer) {
+            if (originOpLayer.featureCollection) {
+              if (originOpLayer.featureCollection.layers.length > 1) {
+                this._recurseOpLayers(originOpLayer.featureCollection.layers, options);
               } else {
                 options.unshift({
                   label: OpLyr.title,
@@ -138,10 +142,12 @@ define([
                   url: undefined,
                   imageData: OpLyr.imageData,
                   id: OpLyr.id,
-                  geometryType: OpLyr2.featureCollection.layers[0].layerObject.geometryType,
+                  geometryType: originOpLayer.featureCollection.layers[0].layerObject.geometryType,
                   type: OpLyr.type,
-                  renderer: OpLyr2.featureCollection.layers[0].layerObject.renderer,
-                  itemId: OpLyr2.itemId
+                  renderer: originOpLayer.featureCollection.layers[0].layerObject.renderer,
+                  itemId: originOpLayer.itemId,
+                  infoTemplate: undefined,
+                  lyrType: "Feature Collection"
                 });
               }
             } else {
@@ -156,7 +162,9 @@ define([
                 id: OpLyr.id,
                 type: OpLyr.type,
                 renderer: OpLyr.layerObject.renderer,
-                geometryType: OpLyr.layerObject.geometryType
+                geometryType: OpLyr.layerObject.geometryType,
+                infoTemplate: infoTemplate,
+                lyrType: "Map Service Layer"
               });
             }
           } else {
@@ -171,7 +179,9 @@ define([
               id: OpLyr.id,
               type: OpLyr.type,
               renderer: OpLyr.layerObject.renderer,
-              geometryType: OpLyr.layerObject.geometryType
+              geometryType: OpLyr.layerObject.geometryType,
+              lyrType: "",
+              infoTemplate: infoTemplate
             });
           }
         }
@@ -229,8 +239,8 @@ define([
           tr.labelText.set("value", lyrInfo.label);
           tr.refreshBox.set("checked", lyrInfo.refresh);
 
-          var a = domConstruct.create("div", {
-            class: "imageDataGFX",
+          domConstruct.create("div", {
+            'class': "imageDataGFX",
             innerHTML: [lyrInfo.imageData],
             title: this.nls.iconColumnText
           }, tr.cells[3]);
@@ -257,7 +267,7 @@ define([
           tabLayers.placeAt(td);
           tabLayers.startup();
           tr.selectLayers = tabLayers;
-          this.own(on(tabLayers, 'change', lang.hitch(this, function (v) {
+          this.own(on(tabLayers, 'change', lang.hitch(this, function () {
             if (!this.isInitalLoad) {
               this._addDefaultSymbol(tr);
             }
@@ -293,10 +303,11 @@ define([
         var refreshCheckBox = new CheckBox({
           onChange: lang.hitch(this, function (v) {
             var value = this.currentTR.selectLayers.value;
+            var rO;
             if (v) {
-              var lyrInfo = this._getLayerOptionByValue(value);
+              //var lyrInfo = this._getLayerOptionByValue(value);
               this.refreshLayers.push(value);
-              var rO = query('.refreshOff', this.refreshOptions.domNode)[0];
+              rO = query('.refreshOff', this.refreshOptions.domNode)[0];
               if (rO) {
                 html.removeClass(rO, 'refreshOff');
                 html.addClass(rO, 'refreshOn');
@@ -309,7 +320,7 @@ define([
               if (i > -1) {
                 this.refreshLayers.splice(i, 1);
                 if (this.refreshLayers.length === 0) {
-                  var rO = query('.refreshOn', this.refreshOptions.domNode)[0];
+                  rO = query('.refreshOn', this.refreshOptions.domNode)[0];
                   if (rO) {
                     html.removeClass(rO, 'refreshOn');
                     html.addClass(rO, 'refreshOff');
@@ -362,7 +373,8 @@ define([
             sd = this.curRow.symbolData;
             hasSymbolData = sd.userDefinedSymbol && (sd.layerId === selectLayersValue);
           }
-
+          var newDiv;
+          var r;
           if (!hasSymbolData || typeof (lo.symbolData) === 'undefined') {
             var options = {
               nls: this.nls,
@@ -379,8 +391,8 @@ define([
             this.curRow.cells[3].innerHTML = "<div></div>";
             this.curRow.symbolData = sourceDijit.symbolInfo;
 
-            var newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
-            var r = this.layerTable.editRow(this.curRow, {
+            newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
+            r = this.layerTable.editRow(this.curRow, {
               imageData: newDiv.innerHTML
             });
 
@@ -391,8 +403,8 @@ define([
             this.curRow.cells[3].innerHTML = "<div></div>";
             this.curRow.symbolData = lo.symbolData;
 
-            var newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
-            var r = this.layerTable.editRow(this.curRow, {
+            newDiv = this._createImageDataDiv(this.curRow.symbolData.icon);
+            r = this.layerTable.editRow(this.curRow, {
               imageData: newDiv.innerHTML
             });
           }
@@ -420,6 +432,7 @@ define([
       _recurseOpLayers: function (pNode, pOptions) {
         var nodeGrp = pNode;
         array.forEach(nodeGrp, lang.hitch(this, function (Node) {
+          var infoTemplate;
           if (Node.newSubLayers.length > 0) {
             this._recurseOpLayers(Node.newSubLayers, pOptions);
           } else if (Node.featureCollection) {
@@ -427,18 +440,25 @@ define([
               this._recurseOpLayers(Node.layers, pOptions);
             }
           } else {
-
             if (typeof (Node.layerObject) !== 'undefined') {
               if (typeof (Node.layerObject.geometryType) === 'undefined') {
                 this.setGeometryType(Node.layerObject);
               }
             }
             var OpLyr2;
-            var w;
+            //var w;
             if (Node.hasOwnProperty("parentLayerInfo")) {
               if (Node.parentLayerInfo.hasOwnProperty("originOperLayer")) {
                 OpLyr2 = Node.parentLayerInfo.originOperLayer;
+                //TODO check This
+                infoTemplate = this._getInfoTemplate(OpLyr2);
               }
+            }
+
+            //TODO check this
+            if (Node.originOperLayer) {
+              originOpLayer = Node.originOperLayer;
+              infoTemplate = this._getInfoTemplate(originOpLayer);
             }
 
             var u;
@@ -446,7 +466,7 @@ define([
             if (Node.layerObject) {
               if (Node.layerObject.url) {
                 u = Node.layerObject.url;
-                subLayerId = parseInt(u.substr(u.lastIndexOf('/') + 1));
+                subLayerId = parseInt(u.substr(u.lastIndexOf('/') + 1), 10);
               }
             }
 
@@ -460,7 +480,9 @@ define([
               itemId: OpLyr2 ? OpLyr2.itemId : undefined,
               renderer: Node.layerObject.renderer,
               geometryType: Node.layerObject.geometryType,
-              subLayerId: subLayerId
+              subLayerId: subLayerId,
+              infoTemplate: infoTemplate,
+              lyrType: undefined
             });
           }
         }));
@@ -494,7 +516,7 @@ define([
           this.curRow.symbolData = data;
 
           var newDiv = this._createImageDataDiv(data.icon);
-          var r = this.layerTable.editRow(this.curRow, {
+          this.layerTable.editRow(this.curRow, {
             imageData: newDiv.innerHTML
           });
 
@@ -522,7 +544,6 @@ define([
         var a;
         //TODO...should I avoid hard coding these??
         if (symbol) {
-          var isSVG = false;
           if (typeof (symbol.setWidth) !== 'undefined') {
             if (typeof (symbol.setHeight) !== 'undefined') {
               symbol.setWidth(27);
@@ -534,26 +555,16 @@ define([
             if (symbol.size > 20) {
               symbol.setSize(20);
             }
-          } else {
-            isSVG = true;
           }
-          if (isSVG) {
-            a = domConstruct.create("div", {
-              class: "imageDataGFX",
-              innerHTML: [symbol],
-              title: this.nls.iconColumnText
-            }, this.curRow.cells[3]);
-          } else {
-            a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
-            var mySurface = gfx.createSurface(a, 28, 28);
-            var descriptors = jsonUtils.getShapeDescriptors(symbol);
-            var shape = mySurface.createShape(descriptors.defaultShape)
-                          .setFill(descriptors.fill)
-                          .setStroke(descriptors.stroke);
-            shape.applyTransform({ dx: 14, dy: 14 });
-          }
+          a = domConstruct.create("div", { 'class': "imageDataGFX" }, this.curRow.cells[3]);
+          var mySurface = gfx.createSurface(a, 28, 28);
+          var descriptors = jsonUtils.getShapeDescriptors(symbol);
+          var shape = mySurface.createShape(descriptors.defaultShape)
+                        .setFill(descriptors.fill)
+                        .setStroke(descriptors.stroke);
+          shape.applyTransform({ dx: 14, dy: 14 });
         } else if (typeof (sym.url) !== 'undefined') {
-          a = domConstruct.create("div", { class: "imageDataGFX" }, this.curRow.cells[3]);
+          a = domConstruct.create("div", { 'class': "imageDataGFX" }, this.curRow.cells[3]);
           domStyle.set(a, "background-image", "url(" + sym.url + ")");
           domStyle.set(a, "background-repeat", "no-repeat");
         }
@@ -591,7 +602,7 @@ define([
                     for (var i = 0; i < resultInfo.fields.length; i++) {
                       f = resultInfo.fields[i];
                       if (f.type === "esriFieldTypeOID") {
-                        break
+                        break;
                       }
                     }
                     this.layer_options[resultInfo.id].oidFieldName = f;

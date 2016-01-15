@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// Copyright � 2015 Esri. All Rights Reserved.
+// Copyright 2015 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,11 +20,9 @@ define([
    'dojo/_base/event',
    'dojo/_base/lang',
    'dojo/_base/Color',
-   'dojo/on',
    'dojo/DeferredList',
    'esri/layers/GraphicsLayer',
    'esri/graphic',
-   'esri/SpatialReference',
    'esri/geometry/Extent',
    'esri/geometry/Point',
    'esri/symbols/PictureMarkerSymbol',
@@ -35,7 +33,24 @@ define([
    'esri/tasks/QueryTask',
    'esri/symbols/jsonUtils',
    "esri/arcgis/utils"
-], function (declare, array, dojoEvent, lang, Color, on, DeferredList, GraphicsLayer, Graphic, SpatialReference, Extent, Point, PictureMarkerSymbol, SimpleMarkerSymbol, SimpleLineSymbol, esriRequest, Query, QueryTask, jsonUtils, arcgisUtils) {
+], function (declare,
+  array,
+  dojoEvent,
+  lang,
+  Color,
+  DeferredList,
+  GraphicsLayer,
+  Graphic,
+  Extent,
+  Point,
+  PictureMarkerSymbol,
+  SimpleMarkerSymbol,
+  SimpleLineSymbol,
+  esriRequest,
+  Query,
+  QueryTask,
+  jsonUtils,
+  arcgisUtils) {
   var clusterLayer = declare('ClusterLayer', [GraphicsLayer], {
 
     cancelRequest: false,
@@ -69,7 +84,8 @@ define([
       var symColor = this.color.toRgb();
       var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
 
-      this._singleSym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+      this._singleSym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9, cls,
+        new Color([symColor[0], symColor[1], symColor[2], 0.5]));
       //this._singleTemplate = options.singleTemplate || new PopupTemplate({ "title": "", "description": "{*}" });
       this._maxSingles = options.maxSingles || 1000;
       /////////////////////////
@@ -80,24 +96,6 @@ define([
       //this.query = options.query;
       //this.queryPending = false;
       this.infoTemplate = options.infoTemplate;
-
-      //TODO May be better to check and do this loop in settings also
-      if (!this.infoTemplate) {
-        if (typeof (this._parentLayer.originOperLayer) !== 'undefined') {
-          if (typeof (this._parentLayer.originOperLayer.parentLayerInfo) !== 'undefined') {
-            if (typeof (this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo) !== 'undefined') {
-              var popupInfos = this._parentLayer.originOperLayer.parentLayerInfo.controlPopupInfo.infoTemplates;
-              if (popupInfos) {
-                var url = this._parentLayerObject.url;
-                var index = url.substr(url.lastIndexOf('/') + 1);
-                if (popupInfos.hasOwnProperty(index)) {
-                  this.infoTemplate = popupInfos[index].infoTemplate;
-                }
-              }
-            }
-          }
-        }
-      }
 
       this._fieldNames = [];
       //this will limit the fields to those fequired for the popup
@@ -113,7 +111,7 @@ define([
       }
       if (this._fieldNames.length < 1) {
         //get all fields
-        this._fieldNames = ["*"]
+        this._fieldNames = ["*"];
       }
 
       this.url = options.lyrInfo.url;
@@ -134,7 +132,6 @@ define([
         //handles the loading and mouse events on the graphics
         this.clickSignal = this.on('click', lang.hitch(this, this.handleClick));
       }
-
     },
 
     clearSingles: function (singles) {
@@ -146,13 +143,35 @@ define([
       this._singles.length = 0;
     },
 
+    _getOrgGraphic: function(p){
+      var g = new Graphic(
+        new Point(p.geometry.x, p.geometry.y, this._map.spatialReference),
+        null,
+        p.attributes
+      );
+      var symmmm;
+      if(this.renderer.hasOwnProperty("getSymbol")){
+        symmmm = this.renderer.getSymbol(g);
+      }
+      //else {
+      //  symmmm = this.renderer.symbol;
+      //}
+      if(symmmm){
+        g.setSymbol(symmmm);
+      }else{
+        g.setSymbol(this._singleSym);
+      }
+      return g;
+    },
+
     _addSingles: function (singles) {
       array.forEach(singles, function (p) {
-        var g = new Graphic(
-          new Point(p.geometry.x, p.geometry.y, this._map.spatialReference),
-          this._singleSym,
-          p.attributes
-        );
+        //var g = new Graphic(
+        //  new Point(p.geometry.x, p.geometry.y, this._map.spatialReference),
+        //  this._singleSym,
+        //  p.attributes
+        //);
+        var g = this._getOrgGraphic(p);
         this._singles.push(g);
         if (this._showSingles) {
           this.add(g);
@@ -261,7 +280,7 @@ define([
           var attr = g.attributes;
           if (attr.Data) {
             this.clearSingles(this._singles);
-            singles = attr.Data
+            singles = attr.Data;
             event.stopPropagation();
             this._addSingles(singles);
             this._map.infoWindow.setFeatures(attr.Data);
@@ -284,15 +303,16 @@ define([
         var delta = event.delta;
         var dx = Math.abs(delta.x);
         var dy = Math.abs(delta.y);
-        if (dx > 50 || dy > 50)
+        if (dx > 50 || dy > 50){
           this.clusterFeatures();
+        }
       }
     },
 
     refreshFeatures: function () {
       if (this.itemId) {
         arcgisUtils.getItem(this.itemId).then(lang.hitch(this, function (response) {
-          var fcItemInfo = response.item;
+          //var fcItemInfo = response.item;
           var featureCollection = response.itemData;
           var fcLayer;
           for (var i = 0; i < featureCollection.layers.length; i++) {
@@ -311,26 +331,37 @@ define([
           if (shouldUpdate) {
             //if valid response then clear and load
             this._features = [];
-
-            //TODO is this right or should I use the items SR
-            var sr = this._map.spatialReference;
-
-            for (var i = 0; i < fs.length; i++) {
-              var item = fs[i];
+            for (var ii = 0; ii < fs.length; ii++) {
+              var item = fs[ii];
               if (item.geometry) {
                 this._features.push({
                   geometry: new Point(item.geometry.x, item.geometry.y, item.geometry.spatialReference),
                   attributes: item.attributes
                 });
+
               } else {
                 console.log("Null geometry skipped");
               }
             }
             this.clusterFeatures();
+            this.updateParentLayer();
           }
         }));
       } else if (this.url) {
         this.loadData(this.url);
+      }
+    },
+
+    updateParentLayer: function(){
+      this._parentLayer.clear();
+      var fs = this._features;
+      for (var ii = 0; ii < fs.length; ii++) {
+        var item = fs[ii];
+        if (item.geometry) {
+          this._parentLayer.add(this._getOrgGraphic(item.geometry));
+        } else {
+          console.log("Null geometry skipped");
+        }
       }
     },
 
@@ -339,10 +370,12 @@ define([
     },
 
     flashSingle: function (graphic) {
+      //TODO check this with the switch to orgGraphic
       if (typeof (graphic.symbol) === 'undefined') {
         var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
         var symColor = this.color.toRgb();
-        graphic.setSymbol(new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5])));
+        graphic.setSymbol(new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9,
+          cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5])));
       }
       this.flashGraphics([graphic]);
     },
@@ -359,19 +392,20 @@ define([
       this.s = setInterval(lang.hitch(this, function () {
         for (var i = 0; i < graphics.length; i++) {
           var g = graphics[i];
+          var s;
           if (x % 2) {
-            var s = g.symbol;
+            s = g.symbol;
             if (s) {
               if (typeof (s.setOutline) === 'function') {
-                s.setOutline(cls)
+                s.setOutline(cls);
               }
               g.setSymbol(s);
             }
           } else {
-            var s = g.symbol;
+            s = g.symbol;
             if (s) {
               if (typeof (s.setOutline) === 'function') {
-                s.setOutline(cls2)
+                s.setOutline(cls2);
               }
               g.setSymbol(s);
             }
@@ -379,16 +413,16 @@ define([
         }
         this.redraw();
         x = x + 1;
-        if (x == 5) {
+        if (x === 5) {
           clearInterval(this.s);
-          for (var i = 0; i < graphics.length; i++) {
-            var g = graphics[i];
-            var s = g.symbol;
-            if (typeof (s) !== 'undefined') {
-              if (typeof (s.setOutline) === 'function') {
-                s.setOutline(cls4)
+          for (var j = 0; j < graphics.length; j++) {
+            var gra = graphics[j];
+            var sym = gra.symbol;
+            if (typeof (sym) !== 'undefined') {
+              if (typeof (sym.setOutline) === 'function') {
+                sym.setOutline(cls4);
               }
-              g.setSymbol(s);
+              gra.setSymbol(sym);
             }
           }
           this.redraw();
@@ -398,12 +432,8 @@ define([
       }), 600);
     },
 
-    //set color
     setColor: function (color) {
-      this.color = Color.fromString(color);
-
-      //var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-      //this._singleSym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 9, cls, new Color([this.color[0], this.color[1], this.color[2], 0.5]));
+      this.color = color;
     },
 
     cancelPendingRequests: function () {
@@ -426,19 +456,23 @@ define([
     },
 
     // cluster features
-    clusterFeatures: function (redraw) {
+    clusterFeatures: function () {
+      //TODO think through this some more
+      // Need to update the cluster symbol size in a way that will show
+      // more variation. Need to understand the min and max numbers
+      // associated with each of the clusters.
       this.clear();
-      if (this._map.infoWindow.isShowing)
+      if (this._map.infoWindow.isShowing){
         this._map.infoWindow.hide();
+      }
       var features = this._features;
       var total = 0;
       if (typeof (features) === 'string') {
         this.setFeatures(features);
       } else if (typeof (features) !== 'undefined') {
         if (features.length > 0) {
-
           var clusterSize = this.clusterSize;
-          this.clusterGraphics = new Array();
+          this.clusterGraphics = [];
           var sr = this._map.spatialReference;
           var mapExt = this._map.extent;
           var o = new Point(mapExt.xmin, mapExt.ymax, sr);
@@ -457,7 +491,7 @@ define([
 
               var ext = new Extent(x1, y1, x2, y2, sr);
 
-              var cGraphics = new Array();
+              var cGraphics = [];
               for (var i in features) {
                 var feature = features[i];
                 if (ext.contains(feature.geometry)) {
@@ -480,7 +514,7 @@ define([
             var clusterGraphic = this.clusterGraphics[g];
             var count = clusterGraphic.graphics.length;
             var data = clusterGraphic.graphics;
-            var size = 40 + parseInt(count / 40);
+            var size = 40 + parseInt(count / 40, 10);
             var size2 = size - (size / 4);
 
             this._setSymbols(size, size2);
@@ -510,7 +544,7 @@ define([
               var pt = clusterGraphic.graphics[0].geometry;
               if (this.renderer.hasOwnProperty("getSymbol") && this.symbolData.symbolType === "LayerSymbol") {
                 //TODO...this idea could be great to show the singles with their actual symbol if this logic makes sense...
-               // this.add(new Graphic(pt, this.csym2, attr));
+                // this.add(new Graphic(pt, this.csym2, attr));
                 var ggg = new Graphic(pt, null, attr.Data[0].attributes);
                 var symmmm = this.renderer.getSymbol(ggg);
                 ggg.setSymbol(symmmm);
@@ -522,7 +556,11 @@ define([
               } else if (this.symbolData.symbolType !== "LayerSymbol") {
                 this.add(new Graphic(pt, this.psym, attr));
               } else {
+                if(this.renderer.symbol){
+                  this.add(new Graphic(pt, this.renderer.symbol, attr));
+                }else{
                   this.add(new Graphic(pt, this.psym, attr));
+                }
               }
             }
           }
@@ -554,15 +592,17 @@ define([
 
     _setSymbols: function (size, size2) {
       var symColor = this.color.toRgb();
+      var fsp;
+      var style;
+      var lineWidth;
       if (typeof (this.symbolData) !== 'undefined') {
         var c;
         //need to make a marker from the fill properties
         if (this.backgroundClusterSymbol === "custom") {
           c = symColor;
         } else {
-          var fsp = jsonUtils.fromJson(this.backgroundClusterSymbol);
-          var style;
-          var lineWidth;
+          fsp = jsonUtils.fromJson(this.backgroundClusterSymbol);
+
           if (fsp.outline.color.a === 0) {
             style = SimpleLineSymbol.STYLE_NULL;
             lineWidth = 0;
@@ -570,11 +610,18 @@ define([
             style = SimpleLineSymbol.STYLE_SOLID;
             lineWidth = fsp.outline.width;
           }
-          var cls = SimpleLineSymbol(style, fsp.outline.color, lineWidth);
-          c = fsp.color.toRgb();
         }
 
-        this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([c[0], c[1], c[2], 0.75]));
+        if(fsp){
+          var cls = SimpleLineSymbol(style, fsp.outline.color, lineWidth);
+          c = fsp.color.toRgb();
+          this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE,
+            size, cls, new Color([c[0], c[1], c[2], 0.75]));
+        }else {
+          this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE,
+            size, null, new Color([c[0], c[1], c[2], 0.75]));
+        }
+
         var path = this.symbolData.s;
         if(path.indexOf("${appPath}") > -1){
           path = this.symbolData.s.replace("${appPath}", window.location.origin + window.location.pathname);
@@ -589,8 +636,10 @@ define([
         } else if (path && this.symbolData.iconType === "LayerIcon") {
           this.psym = jsonUtils.fromJson(this.symbolData.symbol);
         }else {
-          var ssssssss = SimpleLineSymbol(this.symbolData.icon.outline.style, this.symbolData.icon.outline.color, this.symbolData.icon.outline.width);
-          this.psym = new SimpleMarkerSymbol(this.symbolData.icon.style, this.symbolData.icon.size, ssssssss, this.symbolData.icon.color);
+          var ssssssss = SimpleLineSymbol(this.symbolData.icon.outline.style,
+            this.symbolData.icon.outline.color, this.symbolData.icon.outline.width);
+          this.psym = new SimpleMarkerSymbol(this.symbolData.icon.style, this.symbolData.icon.size,
+            ssssssss, this.symbolData.icon.color);
         }
 
         //options for cluster with 1
@@ -604,14 +653,17 @@ define([
         }
       } else {
         //options for cluster with more than 1
-        var cls = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-        this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size, cls, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+        var cls1 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL,
+          new Color(0, 0, 0, 0), 0);
+        this.csym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size,
+          cls1, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
         this.psym = new PictureMarkerSymbol(this.icon.url, size - 11, size - 11);
 
         //options for cluster with 1
         this.psym2 = new PictureMarkerSymbol(this.icon.url, size2 - 13, size2 - 13);
         var cls2 = new SimpleLineSymbol(SimpleLineSymbol.STYLE_NULL, new Color(0, 0, 0, 0), 0);
-        this.csym2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size2, cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
+        this.csym2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, size2,
+          cls2, new Color([symColor[0], symColor[1], symColor[2], 0.5]));
       }
     },
 
@@ -623,23 +675,7 @@ define([
           this.firstRenderSymbol = this.renderer.symbol;
         }
         this.backgroundClusterSymbol = this.symbolData.clusterSymbol;
-        if (this.backgroundClusterSymbol === "custom") {
-        }
       }
-    },
-
-    hexToRgb: function (hex) {
-      var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-      hex = hex.replace(shorthandRegex, function (m, r, g, b) {
-        return r + r + g + g + b + b;
-      });
-
-      var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-      } : null;
     },
 
     getClusterCenter: function (graphics) {

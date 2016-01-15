@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////
-// Copyright � 2015 Esri. All Rights Reserved.
+// Copyright 2015 Esri. All Rights Reserved.
 //
 // Licensed under the Apache License Version 2.0 (the 'License');
 // you may not use this file except in compliance with the License.
@@ -16,24 +16,19 @@
 define(['dojo/_base/declare',
     'dijit/_WidgetsInTemplateMixin',
     'dijit/form/Select',
-    'dojo/_base/array',
     'dojo/_base/lang',
     'dojo/_base/html',
     'dojo/dom-style',
     'dojo/dom-construct',
     'dojo/on',
     'dojox/gfx',
-    'dojo/_base/Color',
-    'dojo/query',
     'esri/symbols/jsonUtils',
     'esri/request',
     'jimu/dijit/SymbolPicker',
     'jimu/BaseWidget',
     'jimu/dijit/Message',
     'jimu/utils',
-    'esri/layers/FeatureLayer',
     'esri/symbols/PictureMarkerSymbol',
-    "esri/symbols/SimpleLineSymbol",
     'dojo/text!./MySymbolPicker.html',
     'dojo/Evented',
     'jimu/dijit/SimpleTable'
@@ -41,24 +36,19 @@ define(['dojo/_base/declare',
   function (declare,
     _WidgetsInTemplateMixin,
     Select,
-    array,
     lang,
     html,
     domStyle,
     domConstruct,
     on,
     gfx,
-    Color,
-    query,
     jsonUtils,
     esriRequest,
     SymbolPicker1,
     BaseWidget,
     Message,
     jimuUtils,
-    FeatureLayer,
     PictureMarkerSymbol,
-    SimpleLineSymbol,
     template,
     Evented) {
     return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
@@ -77,7 +67,7 @@ define(['dojo/_base/declare',
       // 2) Show all symbols when more than one is associated with the renderer..thinking I'll have all symbol things draw below the radio buttons..that way we have the full width and plenty of height o work with
       // 3) Needs to use a loading shelter or whatever...I think that will prevent the flicker while it initally draws
       // 4) Need to set the SVG size relative to the size of the image...no biggie it seems with a symbol that is esentially square...but if the symbol is elongated on the y or the x
-      //    then it looks kind of smushed or stretched 
+      //    then it looks kind of smushed or stretched
       // 5) Get the Symbol picker moved below its rdo button
       // 6) Need a way to define the symbol size for custom symbol
 
@@ -179,10 +169,10 @@ define(['dojo/_base/declare',
               this.rdoThemeCluster.set('checked', true);
             }
             this.userDefinedSymbol = true;
-          } 
+          }
           this.chkClusterSym.set('checked', this.symbolInfo.clusteringEnabled);
           this._chkClusterChanged(this.symbolInfo.clusteringEnabled);
-          
+
         } else {
           //default state
           this.rdoLayerSym.set('checked', true);
@@ -193,7 +183,7 @@ define(['dojo/_base/declare',
           this.rdoLayerIcon.set('checked', true);
           this._rdoCustomIconChanged(false);
           this.symbolType = "LayerSymbol";
-          this.iconType = "LayerIcon"
+          this.iconType = "LayerIcon";
           this.clusteringEnabled = false;
           this.userDefinedSymbol = false;
         }
@@ -209,7 +199,7 @@ define(['dojo/_base/declare',
       resetIcon: function (s) {
         this.customIconPlaceholder.innerHTML = "<div></div>";
         var a = domConstruct.create("div", {
-          class: "customPlaceholder",
+          'class': "customPlaceholder",
           innerHTML: [s],
           title: this.nls.editCustomIcon
         });
@@ -225,11 +215,11 @@ define(['dojo/_base/declare',
         var m = this.map;
 
         var _url, _sr;
-        if (typeof (m._layers["defaultBasemap"]) !== 'undefined') {
-          _url = m._layers["defaultBasemap"]._url.path;
+        if (typeof (m._layers.defaultBasemap) !== 'undefined') {
+          _url = m._layers.defaultBasemap._url.path;
           _sr = m.spatialReference;
         } else {
-          //TODO...would need to handle bboxSR for this...102100  
+          //TODO...would need to handle bboxSR for this...102100
           _url = "http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer";
           _sr = "102100";
         }
@@ -263,13 +253,13 @@ define(['dojo/_base/declare',
 
       _addEventHandlers: function (geoType) {
         if (geoType === 'point') {
-          this.own(on(this.uploadCustomSymbol, 'click', lang.hitch(this, function (event) {
-            this._editIcon(this.tr, "Symbol");
+          this.own(on(this.uploadCustomSymbol, 'click', lang.hitch(this, function () {
+            this._editIcon("Symbol");
           })));
         }
 
-        this.own(on(this.uploadCustomIcon, 'click', lang.hitch(this, function (event) {
-          this._editIcon(this.tr, "Icon");
+        this.own(on(this.uploadCustomIcon, 'click', lang.hitch(this, function () {
+          this._editIcon("Icon");
         })));
 
         this.own(on(this.btnOk, 'click', lang.hitch(this, function () {
@@ -473,7 +463,7 @@ define(['dojo/_base/declare',
       },
 
       _createImageDataDiv: function (sym, convert, node) {
-        var a = domConstruct.create("div", { class: "imageDataGFX" }, node);
+        var a = domConstruct.create("div", { 'class': "imageDataGFX" }, node);
         var symbol = convert ? jsonUtils.fromJson(sym) : sym;
         if (!symbol) {
           symbol = sym;
@@ -489,8 +479,8 @@ define(['dojo/_base/declare',
         return a;
       },
 
-      _createCombinedImageDataDiv: function (infos, bb) {
-        var a = domConstruct.create("div", { class: "imageDataGFXMulti" }, this.customSymbolPlaceholder);
+      _createCombinedImageDataDiv: function (infos) {
+        var a = domConstruct.create("div", { 'class': "imageDataGFXMulti" }, this.customSymbolPlaceholder);
 
         for (var i = 0; i < infos.length; i++) {
           var sym = infos[i].symbol;
@@ -503,7 +493,7 @@ define(['dojo/_base/declare',
           }
           this.renderSymbols.push(symbol);
 
-          var b = domConstruct.create("div", { class: "imageDataGFX imageDataGFX2" }, a);
+          var b = domConstruct.create("div", { 'class': "imageDataGFX imageDataGFX2" }, a);
           var mySurface = gfx.createSurface(b, 26, 26);
           var descriptors = jsonUtils.getShapeDescriptors(this.setSym(symbol));
           var shape = mySurface.createShape(descriptors.defaultShape)
@@ -539,11 +529,11 @@ define(['dojo/_base/declare',
             symbol.height = 20;
           }
         }
-     
+
         return symbol;
       },
 
-      _editIcon: function (tr, type) {
+      _editIcon: function (type) {
         var reader = new FileReader();
         reader.onload = lang.hitch(this, function () {
           var node;
@@ -558,7 +548,7 @@ define(['dojo/_base/declare',
           node.innerHTML = "<div></div>";
 
           var a = domConstruct.create("div", {
-            class: "customPlaceholder",
+            'class': "customPlaceholder",
             innerHTML: ['<img class="customPlaceholder" src="', reader.result, '"/>'].join(''),
             title: title
           });

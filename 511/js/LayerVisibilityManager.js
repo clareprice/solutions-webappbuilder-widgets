@@ -17,10 +17,8 @@
 define(['dojo/_base/declare',
   'dojo/_base/lang',
   'dojo/_base/array',
-  'dojo/topic',
-  'dojo/on',
   'jimu/LayerInfos/LayerInfos'
-], function (declare, lang, array, topic, on, LayerInfos) {
+], function (declare, lang, array, LayerInfos) {
   var layerVisibilityManager = declare(null, {
     _layerList: {},
     _map: null,
@@ -51,11 +49,13 @@ define(['dojo/_base/declare',
 
     storeInitalVisibility: function () {
       //capture the inital visible state of all layers
-      // visibility will be turned off when the widget opens and we want to set them back 
+      // visibility will be turned off when the widget opens and we want to set them back
       // to the inital state when the widget is closed
-      this._initalLayerVisibility = {}
+      this._initalLayerVisibility = {};
       array.forEach(this._opLayers._operLayers, lang.hitch(this, function (layer) {
-        if (layer.layerType === "ArcGISFeatureLayer" || layer.layerType === "ArcGISMapServiceLayer" || typeof (layer.layerType) === 'undefined') {
+        if (layer.layerType === "ArcGISFeatureLayer" ||
+        layer.layerType === "ArcGISMapServiceLayer" ||
+        typeof (layer.layerType) === 'undefined') {
           if (layer.layerObject && this.shouldCheck(layer)) {
             this._initalLayerVisibility[layer.id] = {
               type: layer.layerType,
@@ -80,7 +80,7 @@ define(['dojo/_base/declare',
               layerObject: layer.layerObject,
               visible: layer.layerObject.visible,
               visibleSubLayers: layer.layerObject.visibleLayers
-            };       
+            };
           }
         }
       }));
@@ -103,45 +103,46 @@ define(['dojo/_base/declare',
         for (var key in lyrs) {
           var l = lyrs[key];
 
-          if (!(alreadyChecked.indexOf(l.id) > -1)){
-          if (l.visibleSubLayers) {
-            l.layerObject.setVisibleLayers(l.visibleSubLayers);
-          } else if (typeof (l.pl) === 'undefined') {
-            l.layerObject.setVisibility(auto ? false : l.visible);
-          } else {
-            if (l.layerObject.layerInfos){
-              if (l.layerObject.layerInfos.length > 0) {
-                var visLayers = [];
-                for (var k in lyrs) {
-                  var kk = lyrs[k];
-                  if (kk.li) {
-                    if (kk.li.subLayerId) {
-                      visLayers.push(kk.li.subLayerId);
+          if (alreadyChecked.indexOf(l.id) === -1){
+            if (l.visibleSubLayers) {
+              l.layerObject.setVisibleLayers(l.visibleSubLayers);
+            } else if (typeof (l.pl) === 'undefined') {
+              l.layerObject.setVisibility(auto ? false : l.visible);
+            } else {
+              var visLayers = [];
+              if (l.layerObject.layerInfos){
+                if (l.layerObject.layerInfos.length > 0) {
+
+                  for (var k in lyrs) {
+                    var kk = lyrs[k];
+                    if (kk.li) {
+                      if (kk.li.subLayerId) {
+                        visLayers.push(kk.li.subLayerId);
+                      }
                     }
                   }
                 }
-              }
-              if (!auto) {
-                if (visLayers) {
-                  l.layerObject.setVisibleLayers(visLayers);
-                }
-                l.layerObject.setVisibility(true);
-              } else {
-                //TODO this should only happen once for a mapservice layer
-                //need to update alreadyChecked in a way that would prevent it
-                var initalLayer = this._initalLayerVisibility[l.layerObject.id];
-                if(initalLayer.visibleSubLayers){
-                  l.layerObject.setVisibleLayers(initalLayer.visibleSubLayers);
+                if (!auto) {
+                  if (visLayers) {
+                    l.layerObject.setVisibleLayers(visLayers);
+                  }
                   l.layerObject.setVisibility(true);
+                } else {
+                  //TODO this should only happen once for a mapservice layer
+                  //need to update alreadyChecked in a way that would prevent it
+                  var initalLayer = this._initalLayerVisibility[l.layerObject.id];
+                  if(initalLayer.visibleSubLayers){
+                    l.layerObject.setVisibleLayers(initalLayer.visibleSubLayers);
+                    l.layerObject.setVisibility(true);
+                  }
                 }
-              }
-            } else {
+              } else {
 
-              l.layerObject.setVisibility(auto ? false : l.visible);
-              l.pl.visibility = auto ? false : l.visible;
+                l.layerObject.setVisibility(auto ? false : l.visible);
+                l.pl.visibility = auto ? false : l.visible;
+              }
             }
           }
-        }
         }
       }
     },
